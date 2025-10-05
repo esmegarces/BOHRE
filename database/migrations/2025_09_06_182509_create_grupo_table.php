@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('grupo', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->char('prefijo', 1)->unique('prefijo');
         });
     }

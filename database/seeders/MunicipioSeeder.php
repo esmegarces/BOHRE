@@ -6,6 +6,7 @@ use App\Models\Municipio;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+
 class MunicipioSeeder extends Seeder
 {
     /**
@@ -23,6 +24,7 @@ class MunicipioSeeder extends Seeder
             Municipio::create(['id' => 4, 'nombre' => 'CHIGNAUTLA']);
             Municipio::create(['id' => 5, 'nombre' => 'HUEYAPAN']);
             Municipio::create(['id' => 6, 'nombre' => 'TEZIUTLAN']);
+            Municipio::create(['id' => 7, 'nombre' => 'ATEMPAN']);
         });
 
 

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('especialidad', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->string('nombre', 80)->unique('nombre');
         });
     }

@@ -14,13 +14,14 @@ return new class extends Migration
     public function up()
     {
         Schema::create('docente', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->string('cedulaProfesional', 13);
             $table->integer('numeroExpediente');
             $table->integer('idPersona')->index('idPersona');
 
             $table->unique(['cedulaProfesional', 'numeroExpediente'], 'cedulaProfesional');
             $table->softDeletes();
+            $table->timestamps();
         });
     }
 

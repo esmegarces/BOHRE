@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('semestre', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->smallInteger('numero')->unique('numero');
             $table->enum('periodo', ['FEB/AGO', 'AGO/DIC']);
         });

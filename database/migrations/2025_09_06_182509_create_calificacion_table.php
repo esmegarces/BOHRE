@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('calificacion', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->smallInteger('momento1');
             $table->smallInteger('momento2');
             $table->smallInteger('momento3');

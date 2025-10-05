@@ -14,11 +14,12 @@ return new class extends Migration
     public function up()
     {
         Schema::create('cuenta', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->string('correo', 40)->unique('correo');
             $table->string('contrasena');
             $table->enum('rol', ['ADMIN', 'ALUMNO', 'DOCENTE'])->index('idx_rol');
             $table->softDeletes();
+            $table->timestamps();
         });
     }
 

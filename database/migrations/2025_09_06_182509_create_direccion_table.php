@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('direccion', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->integer('numeroCasa');
             $table->string('calle', 80);
             $table->integer('idLocalidad')->index('idLocalidad');

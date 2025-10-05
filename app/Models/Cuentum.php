@@ -6,8 +6,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Cuentum
@@ -16,6 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $correo
  * @property string $contrasena
  * @property string $rol
+ * @property string|null $deleted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * 
  * @property Collection|Persona[] $personas
  *
@@ -23,9 +28,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Cuentum extends Model
 {
+	use SoftDeletes;
 	protected $table = 'cuenta';
 	public $incrementing = false;
-	public $timestamps = false;
 
 	protected $casts = [
 		'id' => 'int'

@@ -6,8 +6,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Persona
@@ -19,8 +21,13 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $curp
  * @property string $telefono
  * @property string $sexo
+ * @property Carbon $fechaNacimiento
+ * @property string $nss
  * @property int $idDireccion
  * @property int $idCuenta
+ * @property string|null $deleted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * 
  * @property Direccion $direccion
  * @property Cuentum $cuentum
@@ -31,12 +38,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Persona extends Model
 {
+	use SoftDeletes;
 	protected $table = 'persona';
 	public $incrementing = false;
-	public $timestamps = false;
 
 	protected $casts = [
 		'id' => 'int',
+		'fechaNacimiento' => 'datetime',
 		'idDireccion' => 'int',
 		'idCuenta' => 'int'
 	];
@@ -48,6 +56,8 @@ class Persona extends Model
 		'curp',
 		'telefono',
 		'sexo',
+		'fechaNacimiento',
+		'nss',
 		'idDireccion',
 		'idCuenta'
 	];

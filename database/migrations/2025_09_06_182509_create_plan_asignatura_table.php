@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('plan_asignatura', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->integer('idAsignatura')->index('idAsignatura');
             $table->integer('idSemestre')->index('idSemestre');
             $table->integer('idEspecilidad')->nullable()->index('idEspecilidad');

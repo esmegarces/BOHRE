@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('grupo_semestre', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->integer('idGrupo')->index('idGrupo');
             $table->integer('idSemestre')->index('idSemestre');
         });

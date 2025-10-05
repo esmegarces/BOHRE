@@ -6,8 +6,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Alumno
@@ -17,6 +19,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $numeroLista
  * @property string $situacion
  * @property int $idPersona
+ * @property string|null $deleted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * 
  * @property Persona $persona
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
@@ -29,9 +34,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Alumno extends Model
 {
+	use SoftDeletes;
 	protected $table = 'alumno';
 	public $incrementing = false;
-	public $timestamps = false;
 
 	protected $casts = [
 		'id' => 'int',

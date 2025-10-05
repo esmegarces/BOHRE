@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('asignatura', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->string('nombre', 50)->unique('nombre');
             $table->enum('tipo', ['COMUN', 'ESPECIALIDAD'])->index('idx_asignatura_tipo');
         });

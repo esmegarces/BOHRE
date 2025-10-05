@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('ciclo_escolar', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->year('anioInicio');
             $table->year('anioFin');
             $table->boolean('activo')->default(true)->index('idx_ciclo_activo');

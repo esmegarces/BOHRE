@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('generacion', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->year('anioIngreso');
             $table->year('anioEgreso');
             $table->boolean('activa')->default(true)->index('idx_generacion_activa');

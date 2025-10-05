@@ -14,12 +14,14 @@ return new class extends Migration
     public function up()
     {
         Schema::create('alumno', function (Blueprint $table) {
-            $table->integer('id')->primary();
+            $table->id();
             $table->string('nia', 8)->unique('nia');
             $table->integer('numeroLista')->unique('numeroLista');
             $table->enum('situacion', ['ACTIVO', 'BAJA_TEMPORAL', 'BAJA_DEFINITIVA', 'EGRESADO']);
             $table->integer('idPersona')->index('idPersona');
             $table->softDeletes();
+            $table->timestamps();
+
         });
     }
 
