@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('cedulaProfesional', 13);
             $table->integer('numeroExpediente');
-            $table->integer('idPersona')->index('idPersona');
+            $table->unsignedBigInteger('idPersona')->index('idPersona');
 
             $table->unique(['cedulaProfesional', 'numeroExpediente'], 'cedulaProfesional');
             $table->softDeletes();

@@ -16,10 +16,10 @@ return new class extends Migration
         Schema::create('clase', function (Blueprint $table) {
             $table->id();
             $table->string('salonClase', 8);
-            $table->integer('idAsignatura')->index('idAsignatura');
-            $table->integer('idDocente')->index('idDocente');
-            $table->integer('idGrupoSemestre')->index('idGrupoSemestre');
-            $table->integer('idEspecialidad')->nullable()->index('idEspecialidad');
+            $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
+            $table->unsignedBigInteger('idDocente')->index('idDocente');
+            $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
+            $table->unsignedBigInteger('idEspecialidad')->nullable()->index('idEspecialidad');
         });
     }
 

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->integer('numeroCasa');
             $table->string('calle', 80);
-            $table->integer('idLocalidad')->index('idLocalidad');
+            $table->unsignedBigInteger('idLocalidad')->index('idLocalidad');
         });
     }
 

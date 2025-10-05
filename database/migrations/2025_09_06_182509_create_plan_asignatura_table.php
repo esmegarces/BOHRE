@@ -15,9 +15,9 @@ return new class extends Migration
     {
         Schema::create('plan_asignatura', function (Blueprint $table) {
             $table->id();
-            $table->integer('idAsignatura')->index('idAsignatura');
-            $table->integer('idSemestre')->index('idSemestre');
-            $table->integer('idEspecilidad')->nullable()->index('idEspecilidad');
+            $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
+            $table->unsignedBigInteger('idSemestre')->index('idSemestre');
+            $table->unsignedBigInteger('idEspecilidad')->nullable()->index('idEspecilidad');
         });
     }
 

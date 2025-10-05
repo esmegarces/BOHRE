@@ -15,8 +15,8 @@ return new class extends Migration
     {
         Schema::create('alumno_grupo_semestre', function (Blueprint $table) {
             $table->id();
-            $table->integer('idAlumno')->index('idAlumno');
-            $table->integer('idGrupoSemestre')->index('idGrupoSemestre');
+            $table->unsignedBigInteger('idAlumno')->index('idAlumno');
+            $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
         });
     }
 

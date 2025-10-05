@@ -18,8 +18,8 @@ return new class extends Migration
             $table->smallInteger('momento1');
             $table->smallInteger('momento2');
             $table->smallInteger('momento3');
-            $table->integer('idClase')->index('idClase');
-            $table->integer('idAlumno')->index('idAlumno');
+            $table->unsignedBigInteger('idClase')->index('idClase');
+            $table->unsignedBigInteger('idAlumno')->index('idAlumno');
         });
     }
 

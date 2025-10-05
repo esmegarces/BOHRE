@@ -23,8 +23,8 @@ return new class extends Migration
             $table->enum('sexo', ['F', 'M']);
             $table->date('fechaNacimiento');
             $table->string('nss',50);
-            $table->integer('idDireccion')->index('idDireccion');
-            $table->integer('idCuenta')->index('idCuenta');
+            $table->unsignedBigInteger('idDireccion')->index('idDireccion');
+            $table->unsignedBigInteger('idCuenta')->index('idCuenta');
             $table->softDeletes();
             $table->timestamps();
         });

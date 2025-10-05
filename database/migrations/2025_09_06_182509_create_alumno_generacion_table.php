@@ -16,8 +16,8 @@ return new class extends Migration
         Schema::create('alumno_generacion', function (Blueprint $table) {
             $table->id();
             $table->smallInteger('semestreInicial');
-            $table->integer('idAlumno')->index('idAlumno');
-            $table->integer('idGeneracion')->index('idGeneracion');
+            $table->unsignedBigInteger('idAlumno')->index('idAlumno');
+            $table->unsignedBigInteger('idGeneracion')->index('idGeneracion');
         });
     }
 
