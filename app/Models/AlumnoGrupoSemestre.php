@@ -23,11 +23,9 @@ use Illuminate\Database\Eloquent\Model;
 class AlumnoGrupoSemestre extends Model
 {
 	protected $table = 'alumno_grupo_semestre';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'idAlumno' => 'int',
 		'idGrupoSemestre' => 'int'
 	];

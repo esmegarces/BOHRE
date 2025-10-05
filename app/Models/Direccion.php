@@ -25,11 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 class Direccion extends Model
 {
 	protected $table = 'direccion';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'numeroCasa' => 'int',
 		'idLocalidad' => 'int'
 	];

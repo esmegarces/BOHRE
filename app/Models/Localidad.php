@@ -25,11 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 class Localidad extends Model
 {
 	protected $table = 'localidad';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'codigoPostal' => 'int',
 		'idMunicipio' => 'int'
 	];

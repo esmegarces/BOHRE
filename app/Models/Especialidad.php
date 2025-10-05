@@ -24,12 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 class Especialidad extends Model
 {
 	protected $table = 'especialidad';
-	public $incrementing = false;
 	public $timestamps = false;
-
-	protected $casts = [
-		'id' => 'int'
-	];
 
 	protected $fillable = [
 		'nombre'

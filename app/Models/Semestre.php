@@ -24,11 +24,9 @@ use Illuminate\Database\Eloquent\Model;
 class Semestre extends Model
 {
 	protected $table = 'semestre';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'numero' => 'int'
 	];
 

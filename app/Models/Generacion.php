@@ -25,11 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 class Generacion extends Model
 {
 	protected $table = 'generacion';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'anioIngreso' => 'datetime',
 		'anioEgreso' => 'datetime',
 		'activa' => 'bool'

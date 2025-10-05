@@ -27,7 +27,7 @@ class UserRequest extends FormRequest
     {
         return [
             'numeroCasa' => 'required|integer|min:1',
-            'calle' => 'required|string|max:80|min:10',
+            'calle' => 'required|string|max:80|min:5',
             'idLocalidad' => 'required|integer|exists:localidad,id',
             'correo' => 'required|email|unique:cuenta,correo|max:40|min:12',
             'contrasena'=>'required|string|max:12|min:8',

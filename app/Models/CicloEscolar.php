@@ -25,11 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 class CicloEscolar extends Model
 {
 	protected $table = 'ciclo_escolar';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'anioInicio' => 'datetime',
 		'anioFin' => 'datetime',
 		'activo' => 'bool'

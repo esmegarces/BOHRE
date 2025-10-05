@@ -31,10 +31,8 @@ class Docente extends Model
 {
 	use SoftDeletes;
 	protected $table = 'docente';
-	public $incrementing = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'numeroExpediente' => 'int',
 		'idPersona' => 'int'
 	];

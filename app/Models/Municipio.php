@@ -22,12 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 class Municipio extends Model
 {
 	protected $table = 'municipio';
-	public $incrementing = false;
 	public $timestamps = false;
-
-	protected $casts = [
-		'id' => 'int'
-	];
 
 	protected $fillable = [
 		'nombre'

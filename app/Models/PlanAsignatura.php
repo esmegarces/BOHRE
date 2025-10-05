@@ -25,11 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 class PlanAsignatura extends Model
 {
 	protected $table = 'plan_asignatura';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'idAsignatura' => 'int',
 		'idSemestre' => 'int',
 		'idEspecilidad' => 'int'

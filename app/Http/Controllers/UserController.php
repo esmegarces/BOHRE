@@ -9,6 +9,7 @@ use App\Models\Direccion;
 use App\Models\Docente;
 use App\Models\Persona;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -23,30 +24,30 @@ class UserController extends Controller
     {
         try {
             $usuario = \DB::transaction(function () use ($request) {
-                $Direccion = Direccion::create([
-                    'numeroCasa' => $request->numeroCasa,
-                    'calle' => $request->calle,
-                    'idLocalidad' => $request->idLocalidad
-                ]);
+                    $direccion = Direccion::create([
+                        'numeroCasa' => $request->numeroCasa,
+                        'calle' => $request->calle,
+                        'idLocalidad' => $request->idLocalidad
+                    ]);
 
-                $cuenta = Cuentum::create([
-                    'correo' => $request->correo,
-                    'contrasena' => $request->contrasena,
-                    'rol' => $request->rol,
+                    $cuenta = Cuentum::create([
+                        'correo' => $request->correo,
+                        'contrasena' => Hash::make($request->contrasena),
+                        'rol' => $request->rol,
 
-                ]);
-                $persona = Persona::create([
-                    'nombre' => $request->nombre,
-                    'apellidoPaterno' => $request->apellidoPaterno,
-                    'apellidoMaterno' => $request->apellidoMaterno,
-                    'curp' => $request->curp,
-                    'telefono' => $request->telefono,
-                    'sexo' => $request->sexo,
-                    'fechaNacimiento' => $request->fechaNacimiento,
-                    'nss' => $request->nss,
-                    'idDireccion' => $Direccion->id,
-                    'idCuenta' => $cuenta->id,
-                ]);
+                    ]);
+                    $persona = Persona::create([
+                        'nombre' => $request->nombre,
+                        'apellidoPaterno' => $request->apellidoPaterno,
+                        'apellidoMaterno' => $request->apellidoMaterno,
+                        'curp' => $request->curp,
+                        'telefono' => $request->telefono,
+                        'sexo' => $request->sexo,
+                        'fechaNacimiento' => $request->fechaNacimiento,
+                        'nss' => $request->nss,
+                        'idDireccion' => $direccion->id,
+                        'idCuenta' => $cuenta->id,
+                    ]);
                 //Condicional para retornar los datos dependiendo su rol si es docente
                 if ($cuenta->rol == 'docente') {
                     $Docente = Docente::create([

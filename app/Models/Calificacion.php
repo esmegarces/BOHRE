@@ -26,11 +26,9 @@ use Illuminate\Database\Eloquent\Model;
 class Calificacion extends Model
 {
 	protected $table = 'calificacion';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'momento1' => 'int',
 		'momento2' => 'int',
 		'momento3' => 'int',

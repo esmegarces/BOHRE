@@ -30,11 +30,9 @@ use Illuminate\Database\Eloquent\Model;
 class Clase extends Model
 {
 	protected $table = 'clase';
-	public $incrementing = false;
 	public $timestamps = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'idAsignatura' => 'int',
 		'idDocente' => 'int',
 		'idGrupoSemestre' => 'int',

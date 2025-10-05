@@ -30,11 +30,6 @@ class Cuentum extends Model
 {
 	use SoftDeletes;
 	protected $table = 'cuenta';
-	public $incrementing = false;
-
-	protected $casts = [
-		'id' => 'int'
-	];
 
 	protected $fillable = [
 		'correo',

@@ -40,10 +40,8 @@ class Persona extends Model
 {
 	use SoftDeletes;
 	protected $table = 'persona';
-	public $incrementing = false;
 
 	protected $casts = [
-		'id' => 'int',
 		'fechaNacimiento' => 'datetime',
 		'idDireccion' => 'int',
 		'idCuenta' => 'int'

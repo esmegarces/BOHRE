@@ -24,12 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 class Asignatura extends Model
 {
 	protected $table = 'asignatura';
-	public $incrementing = false;
 	public $timestamps = false;
-
-	protected $casts = [
-		'id' => 'int'
-	];
 
 	protected $fillable = [
 		'nombre',

@@ -22,12 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 class Grupo extends Model
 {
 	protected $table = 'grupo';
-	public $incrementing = false;
 	public $timestamps = false;
-
-	protected $casts = [
-		'id' => 'int'
-	];
 
 	protected $fillable = [
 		'prefijo'
