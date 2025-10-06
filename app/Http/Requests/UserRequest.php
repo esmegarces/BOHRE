@@ -25,30 +25,33 @@ class UserRequest extends FormRequest
      */
     public function rules(): array
     {
+        // variable para saber si es required o sometimes de acuerdo al metodo http
+        $requiredOrSometimes = $this->isMethod('patch') ? 'sometimes' : 'required';
+
         return [
-            'numeroCasa' => 'required|integer|min:1',
-            'calle' => 'required|string|max:80|min:5',
-            'idLocalidad' => 'required|integer|exists:localidad,id',
-            'correo' => 'required|email|unique:cuenta,correo|max:40|min:12',
-            'contrasena'=>'required|string|max:12|min:8',
-            'rol'=>'required|in:admin,alumno,docente',
-            'nombre'=>'required|string|max:20|min:3',
-            'apellidoPaterno'=>'required|string|max:20|min:3',
-            'apellidoMaterno'=>'required|string|max:20|min:3',
-            'curp'=>'required|string|max:18|min:18',
-            'telefono'=>'required|string|max:10|min:10|unique:persona,telefono',
-            'sexo'=>'required|in:F,M',
-            'fechaNacimiento'=>'required|date',
-            'nss'=>'required|string|max:50|min:3|unique:persona,nss',
+            'numeroCasa' => "$requiredOrSometimes|integer|min:1",
+            'calle' => "$requiredOrSometimes|string|max:80|min:5",
+            'idLocalidad' => "$requiredOrSometimes|integer|exists:localidad,id",
+            'correo' => "$requiredOrSometimes|email|unique:cuenta,correo|max:40|min:12",
+            'contrasena' => "$requiredOrSometimes|string|max:12|min:8",
+            'rol' => "$requiredOrSometimes|in:admin,alumno,docente",
+            'nombre' => "$requiredOrSometimes|string|max:20|min:3",
+            'apellidoPaterno' => "$requiredOrSometimes|string|max:20|min:3",
+            'apellidoMaterno' => "$requiredOrSometimes|string|max:20|min:3",
+            'curp' => "$requiredOrSometimes|string|max:18|min:18",
+            'telefono' => "$requiredOrSometimes|string|max:10|min:10|unique:persona,telefono",
+            'sexo' => "$requiredOrSometimes|in:F,M",
+            'fechaNacimiento' => "$requiredOrSometimes|date",
+            'nss' => "$requiredOrSometimes|string|max:50|min:3|unique:persona,nss",
             // validaciones docente
-            'cedulaProfesional'=>'required_if:rol,docente|string|max:13|min:10|unique:docente,cedulaProfesional',
-            'numeroExpediente'=>'required_if:rol,docente|string|min:1|unique:docente,numeroExpediente',
-            //validaciones alumno
-            'nia'=>'required_if:rol,alumno|string|max:10|min:8|unique:alumno,nia',
-            //'numeroLista'=>'required_if:rol,docente|string|max:13|min:10|unique:docente,cedulaProfesional',
-            'situacion'=>'required_if:rol,alumno|in:activo,baja_temporal,baja_definitiva,egresado',
+            'cedulaProfesional' => ($this->isMethod('patch') ? 'sometimes|' : '') . 'required_if:rol,docente|string|max:13|min:10|unique:docente,cedulaProfesional',
+            'numeroExpediente' => ($this->isMethod('patch') ? 'sometimes|' : '') . 'required_if:rol,docente|string|min:1|unique:docente,numeroExpediente',
+            // validaciones alumno
+            'nia' => ($this->isMethod('patch') ? 'sometimes|' : '') . 'required_if:rol,alumno|string|max:10|min:8|unique:alumno,nia',
+            'situacion' => ($this->isMethod('patch') ? 'sometimes|' : '') . 'required_if:rol,alumno|in:activo,baja_temporal,baja_definitiva,egresado',
         ];
     }
+
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(

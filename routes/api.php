@@ -13,5 +13,9 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+//Routes de usuario
 Route::post('/usuario',[\App\Http\Controllers\UserController::class,'store']);
-
+Route::get('/usuarios',[\App\Http\Controllers\UserController::class,'show']);
+Route::get('/usuario',[\App\Http\Controllers\UserController::class,'showByRol']);
+Route::patch('/usuario/{id}',[\App\Http\Controllers\UserController::class,'update']);
+Route::delete('/usuario/{id}',[\App\Http\Controllers\UserController::class,'destroy']);

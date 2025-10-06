@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Alumno
- * 
+ *
  * @property int $id
  * @property string $nia
  * @property int $numeroLista
@@ -22,7 +22,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
+ *
  * @property Persona $persona
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
  * @property Collection|Especialidad[] $especialidads
@@ -38,13 +38,13 @@ class Alumno extends Model
 	protected $table = 'alumno';
 
 	protected $casts = [
-		'numeroLista' => 'int',
+		//'numeroLista' => 'int',
 		'idPersona' => 'int'
 	];
 
 	protected $fillable = [
 		'nia',
-		'numeroLista',
+		//'numeroLista',
 		'situacion',
 		'idPersona'
 	];
