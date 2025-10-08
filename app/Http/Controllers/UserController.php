@@ -8,23 +8,25 @@ use App\Models\Cuentum;
 use App\Models\Direccion;
 use App\Models\Docente;
 use App\Models\Persona;
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 class UserController extends Controller
 {
 
     /**
-     * Guardar un usuario
-     *
-     * @param \Illuminate\Http\UserRequest $request validacion de datos de usuario
-     * @return \Illuminate\Http\JsonResponse respuesta JSON
+     * @param UserRequest $request
+     * @return JsonResponse respuesta JSON
+     * @throws Throwable en caso de error en la transaccion
      */
     public function store(UserRequest $request)
     {
         try {
-            $usuario = \DB::transaction(function () use ($request) {
+            $usuario = DB::transaction(function () use ($request) {
                 // almacenando el registro de direccion perteneciente al usuario
                 $direccion = Direccion::create([
                     'numeroCasa' => $request->numeroCasa,
@@ -58,7 +60,7 @@ class UserController extends Controller
                 // evaluando el rol del usuario para determinar en que tabla se debera guardar su informacion
                 if ($cuenta->rol == 'docente') {
                     // si el rol es docente, se guarda en su respectiva tabla
-                    $docente = Docente::create([
+                    Docente::create([
                         'cedulaProfesional' => $request->cedulaProfesional,
                         'numeroExpediente' => $request->numeroExpediente,
                         'idPersona' => $persona->id,
@@ -66,17 +68,15 @@ class UserController extends Controller
 
                     //si no, en caso de alumno, se guarda en la tabla correspondiente
                 } else if ($cuenta->rol == 'alumno') {
-                    $alumno = Alumno::create([
+                    Alumno::create([
                         'nia' => $request->nia,
-                        //'numeroLista' => 0,
                         'situacion' => $request->situacion,
                         'idPersona' => $persona->id,
                     ]);
-
                 }
 
                 // obteniendo el registro con informacion general del usuario, sin importar el rol que tenga
-                $persona = Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
+                return Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
                     ->select(
                         'persona.id',
                         'persona.nombre',
@@ -88,8 +88,6 @@ class UserController extends Controller
                         'c.rol'
                     )
                     ->orderByDesc('persona.id')->first();
-
-                return $persona;
             });
 
             // mensaje de exito
@@ -98,7 +96,7 @@ class UserController extends Controller
                 'data' => $usuario
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al crear el usuario',
                 'error' => $e->getMessage(),
@@ -109,12 +107,17 @@ class UserController extends Controller
     /**
      * Obteniendo usuarios por su rol
      * @param Request $request peticion, de la cual extraeremos el rol
-     * @return \Illuminate\Http\JsonResponse respuesta Json
+     * @return JsonResponse respuesta Json
      */
     public function show(Request $request)
     {
         // extrayendo el parametro rol de la peticion
-        $rol = $request->get('rol');
+        $rol = strtolower($request->get('rol'));
+
+        // validando que el rol sea uno de los permitidos
+        if ($rol && !in_array($rol, ['alumno', 'docente', 'admin'])) {
+            return response()->json(['message' => 'El rol proporcionado no es válido', 'data' => null], 406);
+        }
 
         // obteniendo los usuarios de acuerdo al rol y paginando
         $personas = Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
@@ -137,7 +140,7 @@ class UserController extends Controller
         if ($personas->isEmpty()) {
             return response()->json(['message' => 'Usuarios no encontrados', 'data' => null], 404);
         } else {
-            return response()->json(['message' => 'Usuarios encontrados', 'data' => $personas], 200);
+            return response()->json(['message' => 'Usuarios recuperados con éxito', 'data' => $personas]);
         }
 
     }
@@ -145,17 +148,22 @@ class UserController extends Controller
     /**
      * Obtener la informacion completa especifica de acuerdo al rol y id de un usuario
      * @param Request $request peticion
-     * @return \Illuminate\Http\JsonResponse respuesta JSON
+     * @return JsonResponse respuesta JSON
      */
-    public function showByRol(Request $request)
+    public function showByRol(Request $request): JsonResponse
     {
         // extrayendo el rol y id de la peticion
-        $rol = $request->get('rol');
+        $rol = strtolower($request->get('rol'));
         $idPersona = $request->get('idPersona');
 
         // validando que vengan los datos necesarios en la peticion
         if (!$rol || !$idPersona) {
             return response()->json(['message' => 'El rol y el id de personas son requeridos', 'data' => null], 406);
+        }
+
+        // validando que el rol sea uno de los permitidos
+        if (!in_array($rol, ['alumno', 'docente', 'admin'])) {
+            return response()->json(['message' => 'El rol proporcionado no es válido', 'data' => null], 406);
         }
 
         // query para obtener la data completa del usuario correspondiente de acuerdo al rol y id
@@ -176,7 +184,7 @@ class UserController extends Controller
             'persona.apellidoMaterno',
             'persona.curp',
             'persona.telefono',
-            'persona.sexo',
+            DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
             'persona.fechaNacimiento',
             'persona.nss',
             'c.correo',
@@ -210,18 +218,19 @@ class UserController extends Controller
             return response()->json(['message' => 'Usuario no encontrado', 'data' => null], 404);
 
         } else {
-            return response()->json(['message' => 'Usuario encontrado', 'data' => $persona], 200);
+            return response()->json(['message' => 'Usuario encontrado', 'data' => $persona]);
         }
     }
 
     /**
      * Actualizar la informacion de un usuario
      *
-     * @param \Illuminate\Http\UserRequest $request validacion de datos de usuario
-     * @param int $id id del usuario a actualizar (persona)
-     * @return \Illuminate\Http\JsonResponse
+     * @param UserRequest $request validacion de datos de usuario
+     * @param int $id del usuario a actualizar (persona)
+     * @return JsonResponse
+     * @throws Throwable en caso de error en la transaccion
      */
-    public function update(UserRequest $request, $id)
+    public function update(UserRequest $request, int $id): JsonResponse
     {
         // buscando el usuario por su id (persona)
         $persona = Persona::find($id);
@@ -236,7 +245,11 @@ class UserController extends Controller
 
                 // actualizar dirección
                 $direccion = Direccion::find($persona->idDireccion);
+
+                // obtiene en un array solo los campos que pasaron la validacion de la request
                 $direccionData = $request->only(['numeroCasa', 'calle', 'idLocalidad']);
+
+                // si no esta vacio el array, actualiza
                 if (!empty($direccionData)) {
                     $direccion->update($direccionData);
                 }
@@ -251,15 +264,59 @@ class UserController extends Controller
                 if ($request->has('contrasena')) {
                     $cuentaData['contrasena'] = Hash::make($request->contrasena);
                 }
+
                 if ($request->has('rol')) {
-                    $cuentaData['rol'] = $request->rol;
+                    // obteniendo los roles en minusculas para evitar problemas de comparacion
+                    $rolCuenta = strtolower($cuenta->rol);
+                    $rolRecibido = strtolower($request->rol);
+
+                    // SI EL ROL ACTUAL ES DISTINTO AL RECIBIDO, eliminar registros antiguos y crear nuevos según el nuevo rol
+                    if ($rolCuenta !== $rolRecibido) {
+
+                        // agregando el nuevo rol al array de actualizacion
+                        $cuentaData['rol'] = $rolRecibido;
+
+
+                        // evalua el rol anterior para eliminar su registro correspondiente,
+                        // forzando la eliminacion para evitar problemas de integridad referencial
+                        switch ($rolCuenta) {
+                            case 'docente':
+                                // elimina el docente si el rol anterior era docente
+                                Docente::where('idPersona', $persona->id)->forceDelete();
+                                break;
+                            case 'alumno':
+                                // elimina el alumno si el rol anterior era alumno
+                                Alumno::where('idPersona', $persona->id)->forceDelete();
+                                break;
+                        }
+
+                        // evalua el nuevo rol para crear su registro correspondiente
+                        switch ($rolRecibido) {
+                            case 'docente':
+                                Docente::create([
+                                    'cedulaProfesional' => $request->cedulaProfesional,
+                                    'numeroExpediente' => $request->numeroExpediente,
+                                    'idPersona' => $persona->id,
+                                ]);
+                                break;
+                            case 'alumno':
+                                Alumno::create([
+                                    'nia' => $request->nia,
+                                    'situacion' => $request->situacion,
+                                    'idPersona' => $persona->id,
+                                ]);
+                                break;
+                        }
+                        // el admin no fue necesario evaluarlo porque no existe una tabla dependiente para el rol admin
+                    }
                 }
 
+                // actualiza la cuenta si el array no esta vacio
                 if (!empty($cuentaData)) {
                     $cuenta->update($cuentaData);
                 }
 
-                // actualizar persona
+                // actualizar persona, de la request, en un array solo obtiene los campos que pasaron la validacion
                 $personaData = $request->only([
                     'nombre',
                     'apellidoPaterno',
@@ -271,11 +328,12 @@ class UserController extends Controller
                     'nss'
                 ]);
 
+                // si el array no esta vacio, actualiza
                 if (!empty($personaData)) {
                     $persona->update($personaData);
                 }
 
-                // actualizar datos específicos por rol
+                // actualizar datos específicos por rol (en caso de que no haya cambiado el rol)
                 if ($cuenta->rol === 'docente') {
                     $docente = Docente::where('idPersona', $persona->id)->first();
                     if ($docente) {
@@ -311,7 +369,7 @@ class UserController extends Controller
                     'persona.apellidoMaterno',
                     'persona.curp',
                     'persona.telefono',
-                    'persona.sexo',
+                    DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
                     'persona.fechaNacimiento',
                     'persona.nss',
                     'c.correo',
@@ -325,13 +383,13 @@ class UserController extends Controller
 
                 // Campos específicos según el rol
                 switch ($cuenta->rol) {
-                    case 'ALUMNO':
+                    case 'alumno':
                         $query->join('alumno as a', 'persona.id', '=', 'a.idPersona');
                         $select[] = 'a.nia';
                         $select[] = 'a.situacion';
                         break;
 
-                    case 'DOCENTE':
+                    case 'docente':
                         $query->join('docente as dc', 'persona.id', '=', 'dc.idPersona');
                         $select[] = 'dc.cedulaProfesional';
                         $select[] = 'dc.numeroExpediente';
@@ -344,9 +402,10 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Usuario actualizado con éxito',
                 'data' => $persona
-            ], 200);
+            ]);
 
-        } catch (\Exception $e) {
+        } catch
+        (Exception $e) {
             return response()->json([
                 'message' => 'Error al actualizar el usuario',
                 'error' => $e->getMessage(),
@@ -358,9 +417,10 @@ class UserController extends Controller
      * Eliminar un usuario
      *
      * @param int $id de usuario a eliminar (persona)
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
+     * @throws Throwable en caso de error en la transaccion
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
 
         // buscando el usuario por su id (persona)
@@ -375,6 +435,7 @@ class UserController extends Controller
             // obteniendo la cuenta del usuario
             $cuenta = Cuentum::find($persona->idCuenta);
 
+            // transaccion para eliminar registros en tablas dependientes y la persona, cuenta y direccion (tod_o o nada)
             DB::transaction(function () use ($persona, $cuenta) {
                 // eliminando registros relacionados en tablas dependientes
                 if ($cuenta->rol === 'docente') {
@@ -383,13 +444,13 @@ class UserController extends Controller
                     Alumno::where('idPersona', $persona->id)->delete();
                 }
 
-                // eliminando registros de persona, cuenta y direccion
+                // eliminando registros de persona y cuenta (como tiene soft delete, no se elimina de forma permanente, por lo que no es necesario eliminar la direccion)
                 $persona->delete();
                 $cuenta->delete();
             });
 
-            return response()->json(['message' => 'Usuario eliminado con éxito', 'data' => null], 200);
-        } catch (\Exception $e) {
+            return response()->json(['message' => 'Usuario eliminado con éxito', 'data' => null]);
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al eliminar el usuario',
                 'error' => $e->getMessage(),
