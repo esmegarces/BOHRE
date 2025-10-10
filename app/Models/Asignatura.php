@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Asignatura
- * 
+ *
  * @property int $id
  * @property string $nombre
  * @property string $tipo
- * 
+ *
  * @property Collection|Clase[] $clases
  * @property Collection|PlanAsignatura[] $plan_asignaturas
  *

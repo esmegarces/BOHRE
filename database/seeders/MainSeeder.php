@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class MainSeeder extends Seeder
@@ -11,8 +10,9 @@ class MainSeeder extends Seeder
      * Run the database seeds.
      *
      * @return void
+     * @throws \Throwable
      */
-    public function run()
+    public function run(): void
     {
         \DB::transaction(function () {
             // ejecutar en orden
@@ -23,6 +23,9 @@ class MainSeeder extends Seeder
                 SemestreSeeder::class,
                 CicloEscolarSeeder::class,
                 GeneracionSeeder::class,
+                EspecialidadesSeeder::class,
+                AsignaturasSeeder::class,
+                PlanAsignaturaSeeder::class,
             ]);
         });
     }
