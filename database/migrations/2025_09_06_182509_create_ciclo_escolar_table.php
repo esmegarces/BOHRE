@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->year('anioInicio');
             $table->year('anioFin');
-            $table->boolean('activo')->default(true)->index('idx_ciclo_activo');
+            //$table->boolean('activo')->default(true)->index('idx_ciclo_activo');
         });
     }
 

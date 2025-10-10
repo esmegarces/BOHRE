@@ -19,6 +19,10 @@ class MainSeeder extends Seeder
             $this->call([
                 MunicipioSeeder::class,
                 LocalidadSeeder::class,
+                GrupoSeeder::class,
+                SemestreSeeder::class,
+                CicloEscolarSeeder::class,
+                GeneracionSeeder::class,
             ]);
         });
     }

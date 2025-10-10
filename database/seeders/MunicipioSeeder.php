@@ -18,13 +18,13 @@ class MunicipioSeeder extends Seeder
     {
 
         \DB::transaction(function () {
-            Municipio::create(['id' => 1, 'nombre' => 'TETELES DE AVILA CASTILLO']);
-            Municipio::create(['id' => 2, 'nombre' => 'TLATLAUQUITEPEC']);
-            Municipio::create(['id' => 3, 'nombre' => 'YAONAHUAC']);
-            Municipio::create(['id' => 4, 'nombre' => 'CHIGNAUTLA']);
-            Municipio::create(['id' => 5, 'nombre' => 'HUEYAPAN']);
-            Municipio::create(['id' => 6, 'nombre' => 'TEZIUTLAN']);
-            Municipio::create(['id' => 7, 'nombre' => 'ATEMPAN']);
+            Municipio::updateOrCreate(['id' => 1, 'nombre' => 'TETELES DE AVILA CASTILLO']);
+            Municipio::updateOrCreate(['id' => 2, 'nombre' => 'TLATLAUQUITEPEC']);
+            Municipio::updateOrCreate(['id' => 3, 'nombre' => 'YAONAHUAC']);
+            Municipio::updateOrCreate(['id' => 4, 'nombre' => 'CHIGNAUTLA']);
+            Municipio::updateOrCreate(['id' => 5, 'nombre' => 'HUEYAPAN']);
+            Municipio::updateOrCreate(['id' => 6, 'nombre' => 'TEZIUTLAN']);
+            Municipio::updateOrCreate(['id' => 7, 'nombre' => 'ATEMPAN']);
         });
 
 
