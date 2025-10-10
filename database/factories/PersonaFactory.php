@@ -17,17 +17,15 @@ class PersonaFactory extends Factory
      */
     public function definition()
     {
-        $faker = FakerFactory::create('es_MX');
-
         return [
-            'nombre' => $faker->firstName(),
-            'apellidoPaterno' => $faker->lastName(),
-            'apellidoMaterno' => $faker->lastName(),
-            'curp' => strtoupper($faker->unique()->regexify('[A-Z]{4}[0-9]{6}[A-Z]{6}[0-9]{2}')),
-            'telefono' => $faker->unique()->numerify('##########'),
-            'sexo' => $faker->randomElement(['M', 'F']),
-            'fechaNacimiento' => $faker->date(),
-            'nss' => $faker->unique()->numerify('###########'),
+            'nombre' => $this->faker->firstName(),
+            'apellidoPaterno' => $this->faker->lastName(),
+            'apellidoMaterno' => $this->faker->lastName(),
+            'curp' => strtoupper($this->faker->unique()->regexify('[A-Z]{4}[0-9]{6}[A-Z]{6}[0-9]{2}')),
+            'telefono' => $this->faker->unique()->numerify('##########'),
+            'sexo' => $this->faker->randomElement(['M', 'F']),
+            'fechaNacimiento' => $this->faker->date(),
+            'nss' => $this->faker->unique()->numerify('###########'),
             'idDireccion' => null, // se rellena con ->for()
             'idCuenta' => null,    // se rellena con ->for()
         ];
