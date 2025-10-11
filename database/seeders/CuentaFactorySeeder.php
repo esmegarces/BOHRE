@@ -169,11 +169,15 @@ class CuentaFactorySeeder extends Seeder
                             // - Qué asignatura es
                             // - En qué grupo-semestre
                             // - Si pertenece a una especialidad (NULL = tronco común)
-                            $docente->clases()->firstOrCreate([
+                            $clase = $docente->clases()->firstOrCreate([
                                 'idAsignatura' => $asigId,
                                 'idGrupoSemestre' => $grupoSemestre->id,
                                 'idEspecialidad' => $idEspecialidad,
                             ], ['salonClase' => $salon]);
+
+                            $alumno->calificacions()->firstOrCreate([
+                                'idClase' => $clase->id
+                            ]);
                         }
 
                     } else {
