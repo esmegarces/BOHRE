@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('salonClase', 8);
             $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
-            $table->unsignedBigInteger('idDocente')->index('idDocente');
+            $table->unsignedBigInteger('idDocente')->nullable()->index('idDocente');
             $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
             $table->unsignedBigInteger('idEspecialidad')->nullable()->index('idEspecialidad');
         });
