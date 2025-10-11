@@ -26,6 +26,7 @@ class MainSeeder extends Seeder
                 EspecialidadesSeeder::class,
                 AsignaturasSeeder::class,
                 PlanAsignaturaSeeder::class,
+                GrupoSemestreSeeder::class,
             ]);
         });
     }
