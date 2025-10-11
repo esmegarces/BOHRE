@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Alumno;
 use App\Models\Cuentum;
 use App\Models\Direccion;
@@ -19,11 +20,10 @@ class UserController extends Controller
 {
 
     /**
-     * @param UserRequest $request
      * @return JsonResponse respuesta JSON
      * @throws Throwable en caso de error en la transaccion
      */
-    public function store(UserRequest $request)
+    public function store(StoreUserRequest $request)
     {
         try {
             $usuario = DB::transaction(function () use ($request) {
@@ -225,12 +225,12 @@ class UserController extends Controller
     /**
      * Actualizar la informacion de un usuario
      *
-     * @param UserRequest $request validacion de datos de usuario
+     * @param UpdateUserRequest $request validacion de datos de usuario
      * @param int $id del usuario a actualizar (persona)
      * @return JsonResponse
      * @throws Throwable en caso de error en la transaccion
      */
-    public function update(UserRequest $request, int $id): JsonResponse
+    public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
         // buscando el usuario por su id (persona)
         $persona = Persona::find($id);
