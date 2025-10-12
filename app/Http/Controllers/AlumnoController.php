@@ -150,7 +150,9 @@ class AlumnoController extends Controller
                 // si viene la especialidad
                 if ($request->idEspecialidad && $especialidadesAlumno->isEmpty()) {
                     $alumno->especialidads()->attach($request->idEspecialidad, ['semestreInicio' => $semestre ? $semestre->numero : 0]);
+                }
 
+                if ($request->idEspecialidad && ($especialidadesAlumno->isEmpty() || $especialidadesAlumno->contains('id', $request->idEspecialidad))) {
                     // obtenemos las materias de la especialidad
                     $materiasEspecialidad = $alumno->especialidads()
                         ->where('especialidad.id', $request->idEspecialidad)
@@ -171,10 +173,11 @@ class AlumnoController extends Controller
                 $filePath = public_path('pruebas/' . $fileName);
                 file_put_contents($filePath, print_r($asignaturas, true));
 
+                $clases = [];
                 // TODO: ver que salones existen y como lo voy a enviar
                 // asignando las asignaturas al alumno
                 foreach ($asignaturas as $asignatura) {
-                    $alumno
+                    $clase = $alumno
                         ->grupo_semestres()
                         ->where('grupo_semestre.id', $request->idGrupoSemestre)
                         ->first()
@@ -183,6 +186,25 @@ class AlumnoController extends Controller
                             'idGrupoSemestre' => $request->idGrupoSemestre,
                             'idEspecialidad' => $asignatura['tipo'] == 'COMUN' ? null : ($request->idEspecialidad ?? null),
                         ], ['salonClase' => $asignatura['tipo'] == 'COMUN' ? 'COMUN' . $request->idGrupoSemestre : 'ESP' . $request->idGrupoSemestre]);
+
+                    // guardamos la clase en el arreglo
+                    $clases[] = $clase;
+                }
+
+                // guardar en un archivo de texto las clases que se le asignaron al alumno en public/pruebas y con la fecha actual
+                $fileNameClases = 'clases_' . $alumno->id . '_' . date('Ymd_His') . '.txt';
+                $filePathClases = public_path('pruebas/' . $fileNameClases);
+                file_put_contents($filePathClases, print_r($clases, true));
+
+                foreach ($clases as $clase) {
+                    $clase->calificacions()->firstOrCreate([
+                        'idAlumno' => $alumno->id,
+                        'idClase' => $clase->id,
+                    ], [
+                        'momento1' => 0,
+                        'momento2' => 0,
+                        'momento3' => 0,
+                    ]);
                 }
 
                 // TODO: RETURN ALUMNO WITH RELATIONS
