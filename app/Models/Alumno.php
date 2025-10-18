@@ -8,22 +8,18 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Alumno
- *
+ * 
  * @property int $id
  * @property string $nia
- * @property int $numeroLista
  * @property string $situacion
  * @property int $idPersona
- * @property string|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- *
+ * 
  * @property Persona $persona
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
  * @property Collection|Especialidad[] $especialidads
@@ -35,17 +31,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Alumno extends Model
 {
-	use SoftDeletes, HasFactory;
 	protected $table = 'alumno';
 
 	protected $casts = [
-		//'numeroLista' => 'int',
 		'idPersona' => 'int'
 	];
 
 	protected $fillable = [
 		'nia',
-		//'numeroLista',
 		'situacion',
 		'idPersona'
 	];

@@ -10,11 +10,13 @@ use App\Models\Direccion;
 use App\Models\Docente;
 use App\Models\Persona;
 use Exception;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
+use function PHPUnit\Framework\isEmpty;
 
 class UserController extends Controller
 {
@@ -30,13 +32,13 @@ class UserController extends Controller
                 // almacenando el registro de direccion perteneciente al usuario
                 $direccion = Direccion::create([
                     'numeroCasa' => $request->numeroCasa,
-                    'calle' => $request->calle,
+                    'calle' => strtoupper($request->calle),
                     'idLocalidad' => $request->idLocalidad
                 ]);
 
                 // almacenando el registro de cuenta para el usuario
                 $cuenta = Cuentum::create([
-                    'correo' => $request->correo,
+                    'correo' => strtoupper($request->correo),
                     'contrasena' => Hash::make($request->contrasena),
                     'rol' => $request->rol,
 
@@ -44,10 +46,10 @@ class UserController extends Controller
 
                 // almacenando el registro de persona para el usuario
                 $persona = Persona::create([
-                    'nombre' => $request->nombre,
-                    'apellidoPaterno' => $request->apellidoPaterno,
-                    'apellidoMaterno' => $request->apellidoMaterno,
-                    'curp' => $request->curp,
+                    'nombre' => strtoupper($request->nombre),
+                    'apellidoPaterno' => strtoupper($request->apellidoPaterno),
+                    'apellidoMaterno' => strtoupper($request->apellidoMaterno),
+                    'curp' => strtoupper($request->curp),
                     'telefono' => $request->telefono,
                     'sexo' => $request->sexo,
                     'fechaNacimiento' => $request->fechaNacimiento,
@@ -145,6 +147,49 @@ class UserController extends Controller
 
     }
 
+    public function showDeletes(Request $request)
+    {
+        // extrayendo el parametro rol de la peticion
+        $rol = strtolower($request->get('rol'));
+
+        // validando que el rol sea uno de los permitidos
+        if ($rol && !in_array($rol, ['alumno', 'docente', 'admin'])) {
+            return response()->json(['message' => 'El rol proporcionado no es válido', 'data' => null], 406);
+        }
+
+        // obteniendo los usuarios eliminados de acuerdo al rol
+        $personas = Persona::withTrashed()
+            ->join('cuenta as c', function ($join) {
+                $join->on('persona.idCuenta', '=', 'c.id');
+            })
+            ->select(
+                'persona.id',
+                'persona.nombre',
+                'persona.apellidoPaterno',
+                'persona.apellidoMaterno',
+                'persona.curp',
+                DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+                'persona.nss',
+                'c.rol'
+            )
+            ->where(function ($query) {
+                $query->whereNotNull('persona.deleted_at')
+                    ->orWhereNotNull('c.deleted_at');
+            })
+            ->when($rol, function ($query, $rol) {
+                return $query->where('c.rol', $rol);
+            })
+            ->get();
+
+        // evaluar el caso en que no existan registros en la db
+        if ($personas->isEmpty()) {
+            return response()->json(['message' => 'No hay usuarios eliminados', 'data' => null], 404);
+        } else {
+            return response()->json(['message' => 'Usuarios recuperados con éxito', 'data' => $personas]);
+        }
+
+    }
+
     /**
      * Obtener la informacion completa especifica de acuerdo al rol y id de un usuario
      * @param Request $request peticion
@@ -189,7 +234,9 @@ class UserController extends Controller
             'persona.nss',
             'c.correo',
             'c.rol',
+            'm.id as idMunicipio',
             'm.nombre as municipio',
+            'l.id as idLocalidad',
             'l.nombre as localidad',
             'l.codigoPostal',
             'd.numeroCasa',
@@ -249,6 +296,10 @@ class UserController extends Controller
                 // obtiene en un array solo los campos que pasaron la validacion de la request
                 $direccionData = $request->only(['numeroCasa', 'calle', 'idLocalidad']);
 
+                if (isset($direccionData['calle'])) {
+                    $direccionData['calle'] = strtoupper($direccionData['calle']);
+                }
+
                 // si no esta vacio el array, actualiza
                 if (!empty($direccionData)) {
                     $direccion->update($direccionData);
@@ -259,7 +310,7 @@ class UserController extends Controller
                 $cuentaData = [];
 
                 if ($request->has('correo')) {
-                    $cuentaData['correo'] = $request->correo;
+                    $cuentaData['correo'] = strtoupper($request->correo);
                 }
                 if ($request->has('contrasena')) {
                     $cuentaData['contrasena'] = Hash::make($request->contrasena);
@@ -328,6 +379,14 @@ class UserController extends Controller
                     'nss'
                 ]);
 
+                // Convertir a mayúsculas los campos relevantes si fueron proporcionados
+                $upperKeys = ['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp'];
+                foreach ($upperKeys as $key) {
+                    if (isset($personaData[$key])) {
+                        $personaData[$key] = strtoupper($personaData[$key]);
+                    }
+                }
+
                 // si el array no esta vacio, actualiza
                 if (!empty($personaData)) {
                     $persona->update($personaData);
@@ -374,7 +433,9 @@ class UserController extends Controller
                     'persona.nss',
                     'c.correo',
                     'c.rol',
+                    'm.id as idMunicipio',
                     'm.nombre as municipio',
+                    'l.id as idLocalidad',
                     'l.nombre as localidad',
                     'l.codigoPostal',
                     'd.numeroCasa',
@@ -453,6 +514,161 @@ class UserController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al eliminar el usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un usuario definitivamente (soft delete)
+     *
+     * @param int $id de usuario a eliminar (persona)
+     * @return JsonResponse
+     * @throws Throwable en caso de error en la transaccion
+     */
+    public function destroyPermanently(int $id)
+    {
+        // Buscar la persona incluyendo las eliminadas con soft delete
+        $persona = Persona::withTrashed()->find($id);
+
+        if (!$persona) {
+            return response()->json(['message' => 'Usuario no encontrado', 'data' => null], 404);
+        }
+
+        try {
+            // Obtener la cuenta del usuario (incluyendo eliminadas)
+            $cuenta = Cuentum::withTrashed()->find($persona->idCuenta);
+
+            if (!$cuenta) {
+                return response()->json(['message' => 'Cuenta no encontrada', 'data' => null], 404);
+            }
+
+            // Obtener el ID de la dirección antes de eliminar
+            $idDireccion = $persona->idDireccion;
+
+            // Transacción para eliminar registros
+            DB::transaction(function () use ($persona, $cuenta, $idDireccion) {
+
+                // 1. Eliminar dependencias que NO tienen CASCADE en sus foreign keys
+                if ($cuenta->rol === 'alumno') {
+                    // Obtener IDs de alumnos (incluyendo soft deleted si alumno usa SoftDeletes)
+                    $alumnoIds = DB::table('alumno')
+                        ->where('idPersona', $persona->id)
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($alumnoIds)) {
+                        // Eliminar tablas pivot y relacionadas que NO tienen CASCADE
+                        DB::table('alumno_especialidad')->whereIn('idAlumno', $alumnoIds)->delete();
+                        DB::table('alumno_generacion')->whereIn('idAlumno', $alumnoIds)->delete();
+                        DB::table('alumno_grupo_semestre')->whereIn('idAlumno', $alumnoIds)->delete();
+
+                        // alumno_ciclo tiene CASCADE, pero lo incluimos por seguridad
+                        DB::table('alumno_ciclo')->whereIn('idAlumno', $alumnoIds)->delete();
+
+                        // Otras tablas relacionadas
+                        DB::table('calificacion')->whereIn('idAlumno', $alumnoIds)->delete();
+                    }
+
+                } elseif ($cuenta->rol === 'docente') {
+                    // Obtener IDs de docentes
+                    $docenteIds = DB::table('docente')
+                        ->where('idPersona', $persona->id)
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($docenteIds)) {
+                        // Eliminar clases asociadas
+                        DB::table('clase')->whereIn('idDocente', $docenteIds)->delete();
+                    }
+                }
+
+                // 2. Eliminar persona (CASCADE eliminará automáticamente alumno/docente)
+                // Usando DB::table para hacer DELETE real, no soft delete
+                DB::table('persona')->where('id', $persona->id)->delete();
+
+                // 3. Eliminar cuenta
+                DB::table('cuenta')->where('id', $cuenta->id)->delete();
+
+                // 4. Eliminar dirección
+                DB::table('direccion')->where('id', $idDireccion)->delete();
+            });
+
+            return response()->json([
+                'message' => 'Usuario eliminado definitivamente con éxito',
+                'data' => null
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al eliminar el usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Restaurar un usuario eliminado (soft delete)
+     * @param int $id de usuario a restaurar (persona)
+     * @return JsonResponse respuesta JSON
+     * @throws Throwable en caso de error en la transaccion
+     */
+    public function restore(int $id)
+    {
+        try {
+            // Buscar la persona eliminada (solo soft deleted)
+            $persona = Persona::onlyTrashed()->find($id);
+
+            if (!$persona) {
+                return response()->json([
+                    'message' => 'Usuario eliminado no encontrado',
+                    'data' => null
+                ], 404);
+            }
+
+            // Obtener la cuenta eliminada
+            $cuenta = Cuentum::onlyTrashed()->find($persona->idCuenta);
+
+            if (!$cuenta) {
+                return response()->json([
+                    'message' => 'Cuenta eliminada no encontrada',
+                    'data' => null
+                ], 404);
+            }
+
+            // Transacción para restaurar
+            DB::transaction(function () use ($persona, $cuenta) {
+
+                // Restaurar la persona
+                $persona->restore();
+
+                // Restaurar la cuenta
+                $cuenta->restore();
+            });
+
+            // Obtener el usuario restaurado
+            $usuario = Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
+                ->select(
+                    'persona.id',
+                    'persona.nombre',
+                    'persona.apellidoPaterno',
+                    'persona.apellidoMaterno',
+                    'persona.curp',
+                    DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+                    'persona.nss',
+                    'c.rol'
+                )
+                ->where('persona.id', $id)
+                ->first();
+
+            return response()->json([
+                'message' => 'Usuario restaurado con éxito',
+                'data' => $usuario
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al restaurar el usuario',
                 'error' => $e->getMessage(),
             ], 500);
         }

@@ -14,7 +14,7 @@ return new class extends Migration {
     {
         Schema::table('alumno_ciclo', function (Blueprint $table) {
 
-            $table->foreign('idAlumno', 'alumno_ciclo_ibfk_1')->references(['id'])->on('alumno')->onUpdate('NO ACTION')->onDelete('NO ACTION');
+            $table->foreign('idAlumno', 'alumno_ciclo_ibfk_1')->references(['id'])->on('alumno')->onUpdate('CASCADE')->onDelete('CASCADE');
             $table->foreign('idCicloEscolar', 'alumno_ciclo_ibfk_2')->references(['id'])->on('ciclo_escolar')->onUpdate('NO ACTION')->onDelete('NO ACTION');
         });
     }

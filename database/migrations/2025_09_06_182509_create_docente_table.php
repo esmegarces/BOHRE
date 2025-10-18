@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger('idPersona')->index('idPersona');
 
             $table->unique(['cedulaProfesional', 'numeroExpediente'], 'cedulaProfesional');
-            $table->softDeletes();
+            //$table->softDeletes();
             $table->timestamps();
         });
     }

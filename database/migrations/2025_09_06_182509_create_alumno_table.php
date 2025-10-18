@@ -19,7 +19,7 @@ return new class extends Migration
             //$table->integer('numeroLista')->unique('numeroLista');
             $table->enum('situacion', ['ACTIVO', 'BAJA_TEMPORAL', 'BAJA_DEFINITIVA', 'EGRESADO']);
             $table->unsignedBigInteger('idPersona')->index('idPersona');
-            $table->softDeletes();
+            //$table->softDeletes();
             $table->timestamps();
 
         });

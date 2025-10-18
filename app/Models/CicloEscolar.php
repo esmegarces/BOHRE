@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property Carbon $anioInicio
  * @property Carbon $anioFin
- * @property bool $activo
  *
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
  *
@@ -30,13 +29,11 @@ class CicloEscolar extends Model
 	protected $casts = [
 		'anioInicio' => 'integer',
 		'anioFin' => 'integer',
-		//'activo' => 'bool'
 	];
 
 	protected $fillable = [
 		'anioInicio',
-		'anioFin',
-		//'activo'
+		'anioFin'
 	];
 
 	public function alumno_ciclos()

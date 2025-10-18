@@ -7,17 +7,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Direccion
- *
+ * 
  * @property int $id
  * @property int $numeroCasa
  * @property string $calle
  * @property int $idLocalidad
- *
+ * 
  * @property Localidad $localidad
  * @property Collection|Persona[] $personas
  *
@@ -25,7 +24,6 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Direccion extends Model
 {
-    use HasFactory;
 	protected $table = 'direccion';
 	public $timestamps = false;
 

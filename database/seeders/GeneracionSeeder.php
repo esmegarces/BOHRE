@@ -16,12 +16,12 @@ class GeneracionSeeder extends Seeder
     public function run()
     {
         \DB::transaction(function () {
-            Generacion::updateOrCreate(['anioIngreso' => '2018-08-01', 'anioEgreso' => '2021-07-31']);
-            Generacion::updateOrCreate(['anioIngreso' => '2019-08-01', 'anioEgreso' => '2022-07-31']);
-            Generacion::updateOrCreate(['anioIngreso' => '2020-08-01', 'anioEgreso' => '2023-07-31']);
-            Generacion::updateOrCreate(['anioIngreso' => '2021-08-01', 'anioEgreso' => '2024-07-31']);
-            Generacion::updateOrCreate(['anioIngreso' => '2022-08-01', 'anioEgreso' => '2025-07-31']);
-            Generacion::updateOrCreate(['anioIngreso' => '2023-08-01', 'anioEgreso' => '2026-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2018-08-01', 'fechaEgreso' => '2021-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2019-08-01', 'fechaEgreso' => '2022-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2020-08-01', 'fechaEgreso' => '2023-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2021-08-01', 'fechaEgreso' => '2024-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2022-08-01', 'fechaEgreso' => '2025-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2023-08-01', 'fechaEgreso' => '2026-07-31']);
         });
 
     }

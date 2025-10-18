@@ -39,7 +39,7 @@ class StoreUserRequest extends FormRequest
             'telefono' => 'required|string|max:10|min:10|unique:persona,telefono',
             'sexo' => 'required|in:F,M',
             'fechaNacimiento' => 'required|date',
-            'nss' => 'required|string|max:50|min:3|unique:persona,nss',
+            'nss' => 'required|string|max:12|min:11|unique:persona,nss',
             // validaciones docente
             'cedulaProfesional' => 'required_if:rol,docente|string|max:13|min:10|unique:docente,cedulaProfesional',
             'numeroExpediente' => 'required_if:rol,docente|string|min:1|unique:docente,numeroExpediente',

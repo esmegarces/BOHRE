@@ -15,12 +15,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $salonClase
  * @property int $idAsignatura
- * @property int $idDocente
+ * @property int|null $idDocente
  * @property int $idGrupoSemestre
  * @property int|null $idEspecialidad
  * 
  * @property Asignatura $asignatura
- * @property Docente $docente
+ * @property Docente|null $docente
  * @property GrupoSemestre $grupo_semestre
  * @property Especialidad|null $especialidad
  * @property Collection|Calificacion[] $calificacions

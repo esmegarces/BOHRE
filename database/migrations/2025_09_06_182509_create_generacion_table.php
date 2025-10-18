@@ -15,9 +15,8 @@ return new class extends Migration
     {
         Schema::create('generacion', function (Blueprint $table) {
             $table->id();
-            $table->date('anioIngreso');
-            $table->date('anioEgreso');
-            //$table->boolean('activa')->default(true)->index('idx_generacion_activa');
+            $table->date('fechaIngreso');
+            $table->date('fechaEgreso');
         });
     }
 
