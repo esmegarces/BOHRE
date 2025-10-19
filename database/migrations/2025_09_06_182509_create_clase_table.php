@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('clase', function (Blueprint $table) {
             $table->id();
             $table->string('salonClase', 8);
-            $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
+            $table->unsignedBigInteger('idAsignatura')->nullable()->index('idAsignatura');
             $table->unsignedBigInteger('idDocente')->nullable()->index('idDocente');
             $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
             $table->unsignedBigInteger('idEspecialidad')->nullable()->index('idEspecialidad');

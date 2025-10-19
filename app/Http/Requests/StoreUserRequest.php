@@ -46,6 +46,9 @@ class StoreUserRequest extends FormRequest
             // validaciones alumno
             'nia' => 'required_if:rol,alumno|string|max:8|min:8|unique:alumno,nia',
             'situacion' => 'required_if:rol,alumno|in:activo,baja_temporal,baja_definitiva,egresado',
+            'idGrupoSemestre' => 'required_if:rol,alumno|numeric|exists:grupo_semestre,id',
+            'idGeneracion' => 'required_if:rol,alumno|numeric|exists:generacion,id',
+            'idEspecialidad' => 'sometimes|required_if:rol,alumno|numeric|exists:especialidad,id',
         ];
     }
 

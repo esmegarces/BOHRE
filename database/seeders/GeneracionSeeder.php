@@ -22,6 +22,8 @@ class GeneracionSeeder extends Seeder
             Generacion::updateOrCreate(['fechaIngreso' => '2021-08-01', 'fechaEgreso' => '2024-07-31']);
             Generacion::updateOrCreate(['fechaIngreso' => '2022-08-01', 'fechaEgreso' => '2025-07-31']);
             Generacion::updateOrCreate(['fechaIngreso' => '2023-08-01', 'fechaEgreso' => '2026-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2024-08-01', 'fechaEgreso' => '2027-07-31']);
+            Generacion::updateOrCreate(['fechaIngreso' => '2025-08-01', 'fechaEgreso' => '2028-07-31']);
         });
 
     }

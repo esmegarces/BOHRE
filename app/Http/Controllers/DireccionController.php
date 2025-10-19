@@ -9,7 +9,7 @@ class DireccionController extends Controller
 {
     public function getMunicipios()
     {
-        $municipios = Municipio::all();
+        $municipios = Municipio::orderBy('nombre', 'asc')->get();
 
         if (!$municipios || $municipios->isEmpty()) {
             return response()->json(['message' => 'No se encontraron municipios.'], 404);
@@ -38,7 +38,7 @@ class DireccionController extends Controller
         }
 
         // Obtener las localidades asociadas al municipio
-        $localidades = $municipio->localidads()->get(['id', 'nombre']);
+        $localidades = $municipio->localidads()->orderBy('nombre', 'asc')->get(['id', 'nombre']);
 
         // Verificar si se encontraron localidades
         if ($localidades->isEmpty()) {

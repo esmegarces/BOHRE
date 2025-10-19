@@ -31,3 +31,18 @@ Route::delete('/usuarios/delete/{id}', [\App\Http\Controllers\UserController::cl
 
 // operaciones sobre el alumno
 Route::post('/alumno/{id}', [\App\Http\Controllers\AlumnoController::class, 'storeExtraData']);
+
+
+Route::group(['prefix' => 'periodos'], function () {
+    Route::get('/generaciones', [\App\Http\Controllers\PeriodosController::class, 'getGeneraciones']);
+    Route::get('/gruposemestres', [\App\Http\Controllers\PeriodosController::class, 'getGrupoSemestre']);
+});
+
+Route::get('/especialidades', [\App\Http\Controllers\EspecialidadesController::class, 'index']);
+Route::get('/semestres', [\App\Http\Controllers\SemestresController::class, 'index']);
+
+Route::get('/asignaturas', [\App\Http\Controllers\AsignaturasController::class, 'index']);
+Route::get('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::class, 'show']);
+Route::post('/asignaturas', [\App\Http\Controllers\AsignaturasController::class, 'store']);
+Route::patch('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::class, 'update']);
+Route::delete('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::class, 'destroy']);
