@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AlumnosGruposView;
 use App\Models\GrupoSemestreInfoView;
 use App\Models\GruposSemestresAsignaturasAlumnosCalificacionesView;
+use App\Models\VistaAsignatura;
 use App\Models\VistaGruposSemestresAsignaturasAlumnosCalificacione;
 use Illuminate\Http\Request;
 
@@ -34,7 +35,16 @@ class GrupoSemestreInfoViewController extends Controller
             ], 404);
         }
 
-        return response()->json(['message' => 'informacion recuperada con exito', 'data' => $grupoSemestreInfo]);
+        // obtiene el semestre
+        $asignaturas = VistaAsignatura::where('semestre', $grupoSemestreInfo->semestre)->orderBy('especialidad', 'asc')->get();
+
+        return response()->json([
+            'message' => 'informacion recuperada con exito',
+            'data' => [
+                "general" => $grupoSemestreInfo,
+                "asignaturas" => $asignaturas
+            ]
+        ]);
 
     }
 }
