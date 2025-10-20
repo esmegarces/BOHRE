@@ -46,3 +46,6 @@ Route::get('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::cl
 Route::post('/asignaturas', [\App\Http\Controllers\AsignaturasController::class, 'store']);
 Route::patch('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::class, 'update']);
 Route::delete('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController::class, 'destroy']);
+
+Route::get('/gruposemestresinfo', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'index']);
+Route::get('/gruposemestresinfo/{id}', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'showExtraInfo']);

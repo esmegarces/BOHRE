@@ -463,16 +463,7 @@ class UserController extends Controller
                 }
 
                 // actualizar persona, de la request, en un array solo obtiene los campos que pasaron la validacion
-                $personaData = $request->only([
-                    'nombre',
-                    'apellidoPaterno',
-                    'apellidoMaterno',
-                    'curp',
-                    'telefono',
-                    'sexo',
-                    'fechaNacimiento',
-                    'nss'
-                ]);
+                $personaData = $request->only(['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp', 'telefono', 'sexo', 'fechaNacimiento', 'nss']);
 
                 // Convertir a mayúsculas los campos relevantes si fueron proporcionados
                 $upperKeys = ['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp'];
@@ -499,24 +490,29 @@ class UserController extends Controller
                         }
                     }
                 } elseif ($rolCUente === 'alumno') {
+                    // obtieen el registro del alumno
                     $alumno = Alumno::where('idPersona', $persona->id)->first();
-
                     if ($alumno) {
+                        // actualizando los datos del alumno
                         $alumnoData = $request->only(['nia', 'situacion']);
-
                         if (!empty($alumnoData)) {
                             $alumno->update($alumnoData);
                         }
 
+                        // obteniendo la especialidad actual del alumno
+                        $prev = $alumno->especialidads()->first();
+                        $especialidadAlumno = $prev ? $prev->id : $request->idEspecialidad;
+
                         if ($request->has('idGrupoSemestre')) {
-                            // agregando el nuevo registro en el grupo semestre del alumno, si existe no hace nada
-                            $alumno->grupo_semestres()->syncWithoutDetaching($request->idGrupoSemestre);
+                            // actualizando el nuevo registro en el grupo semestre del alumno, si existe no hace nada
+                            $alumno->grupo_semestres()->sync($request->idGrupoSemestre);
 
                             // recuperando el semestre al que pertenecera el alumno
-                            $semestre = $alumno->grupo_semestres()
+                            $semestreActual = $alumno->grupo_semestres()
                                 ->where('grupo_semestre.id', $request->idGrupoSemestre)
                                 ->first()
                                 ?->semestre;
+
 
                             $yearNow = Carbon::now()->year;
                             // obteniendo el ciclo escolar actual
@@ -539,30 +535,32 @@ class UserController extends Controller
                             // registrando el ciclo escolar y semestre cursado del alumno
                             $alumno->alumno_ciclos()->firstOrCreate([
                                 'idCicloEscolar' => $idCicloEscolar,
-                                'semestreCursado' => $semestre->numero
+                                'semestreCursado' => $semestreActual->numero
                             ]);
 
                             // arreglo para guardar las asignaturas que se le asignaran al alumno
                             $asignaturas = [];
 
                             // obtienendo las asignaturas comunes del semestre
-                            $asignaturas = $semestre->plan_asignaturas()
+                            $asignaturas = $semestreActual->plan_asignaturas()
                                 ->whereNull('idEspecilidad') // Solo las que no son de especialidad
                                 ->with('asignatura')          // Incluye la info de la asignatura
                                 ->get()
                                 ->pluck('asignatura')         // Extrae directamente las asignaturas
                                 ->toArray();
 
+
+
                             // si viene la especialidad
-                            if ($request->has('idEspecialidad')) {
+                            if ($semestreActual->numero >= 3 && $especialidadAlumno) {
                                 // registrando la especialidad del alumno
-                                $alumno->especialidads()->attach($request->idEspecialidad, ['semestreInicio' => $semestre ? $semestre->numero : 0]);
+                                $alumno->especialidads()->sync([$especialidadAlumno => ['semestreInicio' => $semestreActual ? $semestreActual->numero : 0]]);
 
                                 $materiasEspecialidad = $alumno->especialidads()
-                                    ->where('especialidad.id', $request->idEspecialidad)
+                                    ->where('especialidad.id', $especialidadAlumno)
                                     ->first()
                                     ->plan_asignaturas()
-                                    ->where('idSemestre', $semestre->id)
+                                    ->where('idSemestre', $semestreActual->id)
                                     ->with('asignatura')
                                     ->get()
                                     ->pluck('asignatura')
@@ -583,7 +581,7 @@ class UserController extends Controller
                                     ->clases()->firstOrCreate([
                                         'idAsignatura' => $asignatura['id'],
                                         'idGrupoSemestre' => $request->idGrupoSemestre,
-                                        'idEspecialidad' => $asignatura['tipo'] == 'COMUN' ? null : ($request->idEspecialidad ?? null),
+                                        'idEspecialidad' => $asignatura['tipo'] == 'COMUN' ? null : ($especialidadAlumno ?? null),
                                     ], ['salonClase' => $asignatura['tipo'] == 'COMUN' ? 'COMUN' . $request->idGrupoSemestre : 'ESP' . $request->idGrupoSemestre]);
 
                                 // guardamos la clase en el arreglo
