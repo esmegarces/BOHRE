@@ -39,6 +39,9 @@ Route::group(['prefix' => 'periodos'], function () {
 });
 
 Route::get('/especialidades', [\App\Http\Controllers\EspecialidadesController::class, 'index']);
+Route::post('/especialidades', [\App\Http\Controllers\EspecialidadesController::class, 'store']);
+Route::put('/especialidades/{id}', [\App\Http\Controllers\EspecialidadesController::class, 'update']);
+Route::get('/especialidades/asignaturas/{id}', [\App\Http\Controllers\EspecialidadesController::class, 'getAsignaturasByEspecialidad']);
 Route::get('/semestres', [\App\Http\Controllers\SemestresController::class, 'index']);
 
 Route::get('/asignaturas', [\App\Http\Controllers\AsignaturasController::class, 'index']);
