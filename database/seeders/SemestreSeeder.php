@@ -16,12 +16,12 @@ class SemestreSeeder extends Seeder
     public function run()
     {
         \DB::transaction(function () {
-            Semestre::updateOrCreate(['id' => 1, 'numero' => 1, 'periodo' => 'AGO/DIC']);
-            Semestre::updateOrCreate(['id' => 2, 'numero' => 2, 'periodo' => 'FEB/AGO']);
-            Semestre::updateOrCreate(['id' => 3, 'numero' => 3, 'periodo' => 'AGO/DIC']);
-            Semestre::updateOrCreate(['id' => 4, 'numero' => 4, 'periodo' => 'FEB/AGO']);
-            Semestre::updateOrCreate(['id' => 5, 'numero' => 5, 'periodo' => 'AGO/DIC']);
-            Semestre::updateOrCreate(['id' => 6, 'numero' => 6, 'periodo' => 'FEB/AGO']);
+            Semestre::updateOrCreate(['id' => 1, 'numero' => 1, 'mesInicio' => 9, 'diaInicio' => 1, 'mesFin' => 1, 'diaFin' => 30]);
+            Semestre::updateOrCreate(['id' => 5, 'numero' => 5, 'mesInicio' => 9, 'diaInicio' => 1, 'mesFin' => 1, 'diaFin' => 30]);
+            Semestre::updateOrCreate(['id' => 3, 'numero' => 3, 'mesInicio' => 9, 'diaInicio' => 1, 'mesFin' => 1, 'diaFin' => 30]);
+            Semestre::updateOrCreate(['id' => 2, 'numero' => 2, 'mesInicio' => 2, 'diaInicio' => 13, 'mesFin' => 7, 'diaFin' => 25]);
+            Semestre::updateOrCreate(['id' => 4, 'numero' => 4, 'mesInicio' => 2, 'diaInicio' => 13, 'mesFin' => 7, 'diaFin' => 25]);
+            Semestre::updateOrCreate(['id' => 6, 'numero' => 6, 'mesInicio' => 2, 'diaInicio' => 13, 'mesFin' => 7, 'diaFin' => 25]);
         });
     }
 }

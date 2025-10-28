@@ -16,7 +16,10 @@ return new class extends Migration
         Schema::create('semestre', function (Blueprint $table) {
             $table->id();
             $table->smallInteger('numero')->unique('numero');
-            $table->enum('periodo', ['FEB/AGO', 'AGO/DIC']);
+            $table->tinyInteger('mesInicio')->nullable();
+            $table->tinyInteger('diaInicio')->nullable();
+            $table->tinyInteger('mesFin')->nullable();
+            $table->tinyInteger('diaFin')->nullable();
         });
     }
 

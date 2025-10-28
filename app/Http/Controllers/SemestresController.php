@@ -9,7 +9,7 @@ class SemestresController extends Controller
 {
     public function index()
     {
-        $semestres = Semestre::all();
+        $semestres = Semestre::selectRaw("id, numero,  CONCAT(mesInicio, '-', diaInicio, ' / ', mesFin, '-', diaFin) as periodo")->get();
 
         if ($semestres->isEmpty()) {
             return response()->json([

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAsignaturaRequest;
 use App\Http\Requests\UpdateAsignaturaRequest;
 use App\Models\Asignatura;
+use App\Models\VistaAsignatura;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -14,14 +15,14 @@ class AsignaturasController extends Controller
     {
         $asignaturas = Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
             ->join('semestre as s', 'pa.idSemestre', '=', 's.id')
-            ->leftJoin('especialidad as e', 'pa.idEspecilidad', '=', 'e.id')
+            ->leftJoin('especialidad as e', 'pa.idEspecialidad', '=', 'e.id')
             ->select(
                 'asignatura.id as idAsignatura',
                 'asignatura.nombre',
                 'asignatura.tipo',
                 'pa.idSemestre',
-                's.numero as semestre',
-                'pa.idEspecilidad as idEspecialidad',
+                DB::raw("CONCAT(s.numero, ' semestre') as semestre"),
+                'pa.idEspecialidad as idEspecialidad',
                 DB::raw("COALESCE(e.nombre, 'NO APLICA') as especialidad")
             )
             ->paginate(15);
@@ -44,14 +45,14 @@ class AsignaturasController extends Controller
     {
         $asignatura = Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
             ->join('semestre as s', 'pa.idSemestre', '=', 's.id')
-            ->leftJoin('especialidad as e', 'pa.idEspecilidad', '=', 'e.id')
+            ->leftJoin('especialidad as e', 'pa.idEspecialidad', '=', 'e.id')
             ->select(
                 'asignatura.id as idAsignatura',
                 'asignatura.nombre',
                 'asignatura.tipo',
                 'pa.idSemestre',
                 's.numero as semestre',
-                'pa.idEspecilidad as idEspecialidad',
+                'pa.idEspecialidad as idEspecialidad',
                 DB::raw("COALESCE(e.nombre, 'NO APLICA') as especialidad")
             )
             ->where('asignatura.id', $id)
@@ -82,19 +83,19 @@ class AsignaturasController extends Controller
 
                 $asignatura->plan_asignaturas()->create([
                     'idSemestre' => $request->idSemestre,
-                    'idEspecilidad' => $request->idEspecialidad,
+                    'idEspecialidad' => $request->idEspecialidad,
                 ]);
 
                 return Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
                     ->join('semestre as s', 'pa.idSemestre', '=', 's.id')
-                    ->leftJoin('especialidad as e', 'pa.idEspecilidad', '=', 'e.id')
+                    ->leftJoin('especialidad as e', 'pa.idEspecialidad', '=', 'e.id')
                     ->select(
                         'asignatura.id as idAsignatura',
                         'asignatura.nombre',
                         'asignatura.tipo',
                         'pa.idSemestre',
                         's.numero as semestre',
-                        'pa.idEspecilidad as idEspecialidad',
+                        'pa.idEspecialidad as idEspecialidad',
                         DB::raw("COALESCE(e.nombre, 'NO APLICA') as especialidad")
                     )->where('asignatura.id', $asignatura->id)->first();
 
@@ -143,7 +144,7 @@ class AsignaturasController extends Controller
                         if ($plan) {
                             $plan->update([
                                 'idSemestre' => $request->input('idSemestre', $plan->idSemestre),
-                                'idEspecilidad' => $request->input('idEspecialidad', $plan->idEspecilidad),
+                                'idEspecialidad' => $request->input('idEspecialidad', $plan->idEspecilidad),
                             ]);
                         }
                     }
@@ -151,14 +152,14 @@ class AsignaturasController extends Controller
 
                 return Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
                     ->join('semestre as s', 'pa.idSemestre', '=', 's.id')
-                    ->leftJoin('especialidad as e', 'pa.idEspecilidad', '=', 'e.id')
+                    ->leftJoin('especialidad as e', 'pa.idEspecialidad', '=', 'e.id')
                     ->select(
                         'asignatura.id as idAsignatura',
                         'asignatura.nombre',
                         'asignatura.tipo',
                         'pa.idSemestre',
                         's.numero as semestre',
-                        'pa.idEspecilidad as idEspecialidad',
+                        'pa.idEspecialidad as idEspecialidad',
                         'e.nombre as especialidad',
                         DB::raw("COALESCE(e.nombre, 'NO APLICA') as especialidad")
                     )->where('asignatura.id', $asignatura->id)->first();

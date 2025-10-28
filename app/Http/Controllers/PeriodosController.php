@@ -51,7 +51,7 @@ class PeriodosController extends Controller
                 'grupo_semestre.id',
                 'g.prefijo AS nombreGrupo',
                 's.numero AS numeroSemestre',
-                's.periodo AS periodoSemestre',
+                DB::raw("CONCAT(s.diaInicio, '/', s.mesInicio, ' - ', s.diaFin, '/', s.mesFin) AS periodoSemestre")
             )
             ->orderBy('s.numero', 'asc')
             ->get();

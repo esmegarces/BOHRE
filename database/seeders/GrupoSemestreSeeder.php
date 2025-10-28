@@ -20,8 +20,8 @@ class GrupoSemestreSeeder extends Seeder
             $grupos = Grupo::all();
             $semestres = Semestre::all();
 
-            foreach ($grupos as $grupo) {
-                foreach ($semestres as $semestre) {
+            foreach ($semestres as $semestre) {
+                foreach ($grupos as $grupo) {
                     GrupoSemestre::create([
                         'idSemestre' => $semestre->id,
                         'idGrupo' => $grupo->id,

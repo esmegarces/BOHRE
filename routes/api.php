@@ -28,9 +28,7 @@ Route::patch('/usuarios/restore/{id}', [\App\Http\Controllers\UserController::cl
 Route::patch('/usuarios/{id}', [\App\Http\Controllers\UserController::class, 'update']);
 Route::delete('/usuarios/{id}', [\App\Http\Controllers\UserController::class, 'destroy']);
 Route::delete('/usuarios/delete/{id}', [\App\Http\Controllers\UserController::class, 'destroyPermanently']);
-
-// operaciones sobre el alumno
-Route::post('/alumno/{id}', [\App\Http\Controllers\AlumnoController::class, 'storeExtraData']);
+Route::get('/docentes', [\App\Http\Controllers\UserController::class, 'getDocentes']);
 
 
 Route::group(['prefix' => 'periodos'], function () {
@@ -52,3 +50,8 @@ Route::delete('/asignaturas/{id}', [\App\Http\Controllers\AsignaturasController:
 
 Route::get('/gruposemestresinfo', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'index']);
 Route::get('/gruposemestresinfo/{id}', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'showExtraInfo']);
+Route::patch('/clases/{idClase}/asignar-docente', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'asignarDocente']);
+Route::get('/clases/{idClase}/calificaciones', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'getCalificaciones']);
+
+
+

@@ -12,14 +12,14 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Alumno
- * 
+ *
  * @property int $id
  * @property string $nia
  * @property string $situacion
  * @property int $idPersona
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
+ *
  * @property Persona $persona
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
  * @property Collection|Especialidad[] $especialidads
@@ -48,10 +48,6 @@ class Alumno extends Model
 		return $this->belongsTo(Persona::class, 'idPersona');
 	}
 
-	public function alumno_ciclos()
-	{
-		return $this->hasMany(AlumnoCiclo::class, 'idAlumno');
-	}
 
 	public function especialidads()
 	{

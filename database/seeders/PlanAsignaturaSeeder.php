@@ -79,53 +79,53 @@ class PlanAsignaturaSeeder extends Seeder
 
             /* ESPECIAL ALIMNENTOS */
             /* tercer semestre */
-            PlanAsignatura::updateOrCreate(['id' => 52, 'idAsignatura' => 52, 'idSemestre' => 3, 'idEspecilidad' => 1]);
-            PlanAsignatura::updateOrCreate(['id' => 53, 'idAsignatura' => 53, 'idSemestre' => 3, 'idEspecilidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 52, 'idAsignatura' => 52, 'idSemestre' => 3, 'idEspecialidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 53, 'idAsignatura' => 53, 'idSemestre' => 3, 'idEspecialidad' => 1]);
             /* cuarto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 54, 'idAsignatura' => 54, 'idSemestre' => 4, 'idEspecilidad' => 1]);
-            PlanAsignatura::updateOrCreate(['id' => 55, 'idAsignatura' => 55, 'idSemestre' => 4, 'idEspecilidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 54, 'idAsignatura' => 54, 'idSemestre' => 4, 'idEspecialidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 55, 'idAsignatura' => 55, 'idSemestre' => 4, 'idEspecialidad' => 1]);
             /* quinto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 56, 'idAsignatura' => 56, 'idSemestre' => 5, 'idEspecilidad' => 1]);
-            PlanAsignatura::updateOrCreate(['id' => 57, 'idAsignatura' => 57, 'idSemestre' => 5, 'idEspecilidad' => 1]);
-            PlanAsignatura::updateOrCreate(['id' => 58, 'idAsignatura' => 58, 'idSemestre' => 5, 'idEspecilidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 56, 'idAsignatura' => 56, 'idSemestre' => 5, 'idEspecialidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 57, 'idAsignatura' => 57, 'idSemestre' => 5, 'idEspecialidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 58, 'idAsignatura' => 58, 'idSemestre' => 5, 'idEspecialidad' => 1]);
             /* sexto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 59, 'idAsignatura' => 59, 'idSemestre' => 6, 'idEspecilidad' => 1]);
-            PlanAsignatura::updateOrCreate(['id' => 60, 'idAsignatura' => 60, 'idSemestre' => 6, 'idEspecilidad' => 1]);
-            //PlanAsignatura::updateOrCreate(['id' => 61, 'idAsignatura' => 61, 'idSemestre' => 6, 'idEspecilidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 59, 'idAsignatura' => 59, 'idSemestre' => 6, 'idEspecialidad' => 1]);
+            PlanAsignatura::updateOrCreate(['id' => 60, 'idAsignatura' => 60, 'idSemestre' => 6, 'idEspecialidad' => 1]);
+            //PlanAsignatura::updateOrCreate(['id' => 61, 'idAsignatura' => 61, 'idSemestre' => 6, 'idEspecialidad' => 1]);
 
 
             /* ESPECIALIDAD SALUD */
             /* tercer semestre */
-            PlanAsignatura::updateOrCreate(['id' => 62, 'idAsignatura' => 62, 'idSemestre' => 3, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 63, 'idAsignatura' => 63, 'idSemestre' => 3, 'idEspecilidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 62, 'idAsignatura' => 62, 'idSemestre' => 3, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 63, 'idAsignatura' => 63, 'idSemestre' => 3, 'idEspecialidad' => 2]);
             /* cuarto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 64, 'idAsignatura' => 64, 'idSemestre' => 4, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 65, 'idAsignatura' => 65, 'idSemestre' => 4, 'idEspecilidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 64, 'idAsignatura' => 64, 'idSemestre' => 4, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 65, 'idAsignatura' => 65, 'idSemestre' => 4, 'idEspecialidad' => 2]);
             /* quinto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 66, 'idAsignatura' => 66, 'idSemestre' => 5, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 67, 'idAsignatura' => 67, 'idSemestre' => 5, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 68, 'idAsignatura' => 68, 'idSemestre' => 5, 'idEspecilidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 66, 'idAsignatura' => 66, 'idSemestre' => 5, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 67, 'idAsignatura' => 67, 'idSemestre' => 5, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 68, 'idAsignatura' => 68, 'idSemestre' => 5, 'idEspecialidad' => 2]);
             /* sexto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 69, 'idAsignatura' => 69, 'idSemestre' => 6, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 70, 'idAsignatura' => 70, 'idSemestre' => 6, 'idEspecilidad' => 2]);
-            PlanAsignatura::updateOrCreate(['id' => 71, 'idAsignatura' => 71, 'idSemestre' => 6, 'idEspecilidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 69, 'idAsignatura' => 69, 'idSemestre' => 6, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 70, 'idAsignatura' => 70, 'idSemestre' => 6, 'idEspecialidad' => 2]);
+            PlanAsignatura::updateOrCreate(['id' => 71, 'idAsignatura' => 71, 'idSemestre' => 6, 'idEspecialidad' => 2]);
 
 
             /* ESPECIALIDAD ADMINISTRACION */
             /* tercer semestre */
-            PlanAsignatura::updateOrCreate(['id' => 72, 'idAsignatura' => 72, 'idSemestre' => 3, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 73, 'idAsignatura' => 73, 'idSemestre' => 3, 'idEspecilidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 72, 'idAsignatura' => 72, 'idSemestre' => 3, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 73, 'idAsignatura' => 73, 'idSemestre' => 3, 'idEspecialidad' => 3]);
             /* cuarto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 74, 'idAsignatura' => 74, 'idSemestre' => 4, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 75, 'idAsignatura' => 75, 'idSemestre' => 4, 'idEspecilidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 74, 'idAsignatura' => 74, 'idSemestre' => 4, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 75, 'idAsignatura' => 75, 'idSemestre' => 4, 'idEspecialidad' => 3]);
             /* quinto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 76, 'idAsignatura' => 76, 'idSemestre' => 5, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 77, 'idAsignatura' => 77, 'idSemestre' => 5, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 78, 'idAsignatura' => 78, 'idSemestre' => 5, 'idEspecilidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 76, 'idAsignatura' => 76, 'idSemestre' => 5, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 77, 'idAsignatura' => 77, 'idSemestre' => 5, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 78, 'idAsignatura' => 78, 'idSemestre' => 5, 'idEspecialidad' => 3]);
             /* sexto semestre */
-            PlanAsignatura::updateOrCreate(['id' => 79, 'idAsignatura' => 79, 'idSemestre' => 6, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 80, 'idAsignatura' => 80, 'idSemestre' => 6, 'idEspecilidad' => 3]);
-            PlanAsignatura::updateOrCreate(['id' => 81, 'idAsignatura' => 81, 'idSemestre' => 6, 'idEspecilidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 79, 'idAsignatura' => 79, 'idSemestre' => 6, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 80, 'idAsignatura' => 80, 'idSemestre' => 6, 'idEspecialidad' => 3]);
+            PlanAsignatura::updateOrCreate(['id' => 81, 'idAsignatura' => 81, 'idSemestre' => 6, 'idEspecialidad' => 3]);
         });
     }
 }

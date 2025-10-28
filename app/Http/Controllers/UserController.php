@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\Alumno;
-use App\Models\CicloEscolar;
+use App\Models\Clase;
 use App\Models\Cuentum;
 use App\Models\Direccion;
 use App\Models\Docente;
@@ -32,22 +32,19 @@ class UserController extends Controller
     {
         try {
             $usuario = DB::transaction(function () use ($request) {
-                // almacenando el registro de direccion perteneciente al usuario
+                // Crear dirección, cuenta y persona (igual que antes)
                 $direccion = Direccion::create([
                     'numeroCasa' => $request->numeroCasa,
                     'calle' => strtoupper($request->calle),
                     'idLocalidad' => $request->idLocalidad
                 ]);
 
-                // almacenando el registro de cuenta para el usuario
                 $cuenta = Cuentum::create([
                     'correo' => strtoupper($request->correo),
                     'contrasena' => Hash::make($request->contrasena),
                     'rol' => $request->rol,
-
                 ]);
 
-                // almacenando el registro de persona para el usuario
                 $persona = Persona::create([
                     'nombre' => strtoupper($request->nombre),
                     'apellidoPaterno' => strtoupper($request->apellidoPaterno),
@@ -61,17 +58,13 @@ class UserController extends Controller
                     'idCuenta' => $cuenta->id,
                 ]);
 
-
-                // evaluando el rol del usuario para determinar en que tabla se debera guardar su informacion
                 if ($cuenta->rol == 'docente') {
-                    // si el rol es docente, se guarda en su respectiva tabla
                     Docente::create([
                         'cedulaProfesional' => $request->cedulaProfesional,
                         'numeroExpediente' => $request->numeroExpediente,
                         'idPersona' => $persona->id,
                     ]);
 
-                    //si no, en caso de alumno, se guarda en la tabla correspondiente
                 } else if ($cuenta->rol == 'alumno') {
                     $alumno = Alumno::create([
                         'nia' => $request->nia,
@@ -79,103 +72,42 @@ class UserController extends Controller
                         'idPersona' => $persona->id,
                     ]);
 
-                    // obteniendo el registro del alumno en grupo_semestre
-                    //$alumnoGrupoSemestre = $alumno->grupo_semestres()->get();
-
-                    // si no existen registros o el grupo semestre a registrar es nuevo
-                    //if (!$alumnoGrupoSemestre || !$alumnoGrupoSemestre->contains('id', $request->idGrupoSemestre)) {
-                    // guardamos la relacion del alumno con el gruposemestre
+                    // Asignar al grupo-semestre
                     $alumno->grupo_semestres()->attach($request->idGrupoSemestre);
 
-                    //}
-
-                    // recuperando el semestre al que pertenecera el alumno
+                    // Recuperar semestre
                     $semestre = $alumno->grupo_semestres()
                         ->where('grupo_semestre.id', $request->idGrupoSemestre)
                         ->first()
                         ?->semestre;
 
-                    $yearNow = Carbon::now()->year;
-                    // obteniendo el ciclo escolar actual
-                    $cicloActual = CicloEscolar::where('anioInicio', '=', $yearNow)
-                        ->where('anioFin', '>=', $yearNow + 1)
-                        ->first();
-
-                    // si no existe un ciclo escolar actual, se crea uno nuevo
-                    if (!$cicloActual) {
-                        $cicloActual = CicloEscolar::create([
-                            'anioInicio' => $yearNow,
-                            'anioFin' => $yearNow + 1
-                        ]);
-                    }
-
-                    // registrando el ciclo escolar actual para el alumno
-                    $idCicloEscolar = $cicloActual->id;
-
-                    // registrando el ciclo escolar y semestre cursado del alumno
-                    $alumno->alumno_ciclos()->create([
-                        'idCicloEscolar' => $idCicloEscolar,
-                        'semestreCursado' => $semestre->numero
-                    ]);
-
-                    // Buscar la generación por el id proporcionado
+                    // Asociar generación
                     $generacion = Generacion::find($request->idGeneracion);
-
-                    // Asociar la generación al alumno
                     $alumno->generacions()->attach($generacion->id, [
                         'semestreInicial' => $semestre->numero
                     ]);
 
-                    // arreglo para guardar las asignaturas que se le asignaran al alumno
-                    $asignaturas = [];
-
-                    // obtienendo las asignaturas comunes del semestre
-                    $asignaturas = $semestre->plan_asignaturas()
-                        ->whereNull('idEspecilidad') // Solo las que no son de especialidad
-                        ->with('asignatura')          // Incluye la info de la asignatura
-                        ->get()
-                        ->pluck('asignatura')         // Extrae directamente las asignaturas
-                        ->toArray();
-
-                    // si viene la especialidad
+                    // Si tiene especialidad, registrarla
                     if ($request->idEspecialidad) {
-                        // registrando la especialidad del alumno
-                        $alumno->especialidads()->attach($request->idEspecialidad, ['semestreInicio' => $semestre ? $semestre->numero : 0]);
-
-                        $materiasEspecialidad = $alumno->especialidads()
-                            ->where('especialidad.id', $request->idEspecialidad)
-                            ->first()
-                            ->plan_asignaturas()
-                            ->where('idSemestre', $semestre->id)
-                            ->with('asignatura')
-                            ->get()
-                            ->pluck('asignatura')
-                            ->toArray();
-
-                        // combinamos las asignaturas del semestre con las de la especialidad
-                        $asignaturas = array_merge($asignaturas, $materiasEspecialidad);
+                        $alumno->especialidads()->attach($request->idEspecialidad, [
+                            'semestreInicio' => $semestre->numero
+                        ]);
                     }
 
-                    $clases = [];
-                    // TODO: ver que salones existen y como lo voy a enviar
-                    // asignando las asignaturas al alumno
-                    foreach ($asignaturas as $asignatura) {
-                        $clase = $alumno
-                            ->grupo_semestres()
-                            ->where('grupo_semestre.id', $request->idGrupoSemestre)
-                            ->first()
-                            ->clases()->firstOrCreate([
-                                'idAsignatura' => $asignatura['id'],
-                                'idGrupoSemestre' => $request->idGrupoSemestre,
-                                'idEspecialidad' => $asignatura['tipo'] == 'COMUN' ? null : ($request->idEspecialidad ?? null),
-                            ], ['salonClase' => $asignatura['tipo'] == 'COMUN' ? 'COMUN' . $request->idGrupoSemestre : 'ESP' . $request->idGrupoSemestre]);
+                    // IMPORTANTE: Obtener las clases YA EXISTENTES del año actual
+                    $anioActual = now()->year;
 
-                        // guardamos la clase en el arreglo
-                        $clases[] = $clase;
-                    }
+                    $clases = Clase::where('idGrupoSemestre', $request->idGrupoSemestre)
+                        ->where('anio', $anioActual)
+                        ->where(function ($query) use ($request) {
+                            $query->whereNull('idEspecialidad') // Tronco común
+                            ->orWhere('idEspecialidad', $request->idEspecialidad); // Su especialidad
+                        })
+                        ->get();
 
+                    // Crear calificaciones para cada clase
                     foreach ($clases as $clase) {
-                        $clase->calificacions()->firstOrCreate([
+                        $alumno->calificacions()->firstOrCreate([
                             'idAlumno' => $alumno->id,
                             'idClase' => $clase->id,
                         ], [
@@ -186,7 +118,6 @@ class UserController extends Controller
                     }
                 }
 
-                // obteniendo el registro con informacion general del usuario, sin importar el rol que tenga
                 return Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
                     ->select(
                         'persona.id',
@@ -198,10 +129,10 @@ class UserController extends Controller
                         'persona.nss',
                         'c.rol'
                     )
-                    ->orderByDesc('persona.id')->first();
+                    ->where('persona.id', $persona->id)
+                    ->first();
             });
 
-            // mensaje de exito
             return response()->json([
                 'message' => 'Usuario creado con éxito',
                 'data' => $usuario
@@ -383,7 +314,7 @@ class UserController extends Controller
                 $select[] = 'a.situacion';
                 $select[] = 'gs.id as idGrupoSemestre';
                 $select[] = 's.numero as numeroSemestre';
-                $select[] = 's.periodo as periodoSemestre';
+                //$select[] = 's.periodo as periodoSemestre';
                 $select[] = 'gen.id as idGeneracion';
                 $select[] = 'gen.fechaIngreso as fechaIngresoGeneracion';
                 $select[] = 'gen.fechaEgreso as fechaEgresoGeneracion';
@@ -419,35 +350,33 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
-        // buscando el usuario por su id (persona)
         $persona = Persona::find($id);
 
-        // evaluando si no se encuentra el usuario en la db
         if (!$persona) {
             return response()->json(['message' => 'Usuario no encontrado', 'data' => null], 404);
         }
 
         try {
-            $persona = DB::transaction(function () use ($request, $persona) {
+            $person = DB::transaction(function () use ($request, $persona) {
 
-                // actualizar dirección
+                // ============================================
+                // 1. ACTUALIZAR DIRECCIÓN
+                // ============================================
                 $direccion = Direccion::find($persona->idDireccion);
-
-                // obtiene en un array solo los campos que pasaron la validacion de la request
                 $direccionData = $request->only(['numeroCasa', 'calle', 'idLocalidad']);
 
                 if (isset($direccionData['calle'])) {
                     $direccionData['calle'] = strtoupper($direccionData['calle']);
                 }
 
-                // si no esta vacio el array, actualiza
                 if (!empty($direccionData)) {
                     $direccion->update($direccionData);
                 }
 
-                // actualizar cuenta
+                // ============================================
+                // 2. ACTUALIZAR CUENTA
+                // ============================================
                 $cuenta = $persona->cuentum;
-
                 $cuentaData = [];
 
                 if ($request->has('correo')) {
@@ -457,15 +386,18 @@ class UserController extends Controller
                     $cuentaData['contrasena'] = Hash::make($request->contrasena);
                 }
 
-                // actualiza la cuenta si el array no esta vacio
                 if (!empty($cuentaData)) {
                     $cuenta->update($cuentaData);
                 }
 
-                // actualizar persona, de la request, en un array solo obtiene los campos que pasaron la validacion
-                $personaData = $request->only(['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp', 'telefono', 'sexo', 'fechaNacimiento', 'nss']);
+                // ============================================
+                // 3. ACTUALIZAR PERSONA
+                // ============================================
+                $personaData = $request->only([
+                    'nombre', 'apellidoPaterno', 'apellidoMaterno',
+                    'curp', 'telefono', 'sexo', 'fechaNacimiento', 'nss'
+                ]);
 
-                // Convertir a mayúsculas los campos relevantes si fueron proporcionados
                 $upperKeys = ['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp'];
                 foreach ($upperKeys as $key) {
                     if (isset($personaData[$key])) {
@@ -473,227 +405,275 @@ class UserController extends Controller
                     }
                 }
 
-                // si el array no esta vacio, actualiza
                 if (!empty($personaData)) {
                     $persona->update($personaData);
                 }
 
-                $rolCUente = strtolower($cuenta->rol);
+                $rolCuenta = strtolower($cuenta->rol);
 
-                // actualizar datos específicos por rol (en caso de que no haya cambiado el rol)
-                if ($rolCUente === 'docente') {
-                    $docente = Docente::where('idPersona', $persona->id)->first();
-                    if ($docente) {
-                        $docenteData = $request->only(['cedulaProfesional', 'numeroExpediente']);
-                        if (!empty($docenteData)) {
-                            $docente->update($docenteData);
-                        }
-                    }
-                } elseif ($rolCUente === 'alumno') {
-                    // obtieen el registro del alumno
-                    $alumno = Alumno::where('idPersona', $persona->id)->first();
-                    if ($alumno) {
-                        // actualizando los datos del alumno
-                        $alumnoData = $request->only(['nia', 'situacion']);
-                        if (!empty($alumnoData)) {
-                            $alumno->update($alumnoData);
-                        }
+                // ============================================
+                // 4. ACTUALIZAR POR ROL
+                // ============================================
+                if ($rolCuenta === 'docente') {
+                    $this->actualizarDocente($request, $persona);
 
-                        // obteniendo la especialidad actual del alumno
-                        $prev = $alumno->especialidads()->first();
-                        $especialidadAlumno = $prev ? $prev->id : $request->idEspecialidad;
-
-                        if ($request->has('idGrupoSemestre')) {
-                            // actualizando el nuevo registro en el grupo semestre del alumno, si existe no hace nada
-                            $alumno->grupo_semestres()->sync($request->idGrupoSemestre);
-
-                            // recuperando el semestre al que pertenecera el alumno
-                            $semestreActual = $alumno->grupo_semestres()
-                                ->where('grupo_semestre.id', $request->idGrupoSemestre)
-                                ->first()
-                                ?->semestre;
-
-
-                            $yearNow = Carbon::now()->year;
-                            // obteniendo el ciclo escolar actual
-                            $cicloActual = CicloEscolar::where('anioInicio', '=', $yearNow)
-                                ->where('anioFin', '>=', $yearNow + 1)
-                                ->first();
-
-                            // si no existe un ciclo escolar actual, se crea uno nuevo
-                            if (!$cicloActual) {
-                                $cicloActual = CicloEscolar::create([
-                                    'anioInicio' => $yearNow,
-                                    'anioFin' => $yearNow + 1
-                                ]);
-                            }
-
-
-                            // registrando el ciclo escolar actual para el alumno
-                            $idCicloEscolar = $cicloActual->id;
-
-                            // registrando el ciclo escolar y semestre cursado del alumno
-                            $alumno->alumno_ciclos()->firstOrCreate([
-                                'idCicloEscolar' => $idCicloEscolar,
-                                'semestreCursado' => $semestreActual->numero
-                            ]);
-
-                            // arreglo para guardar las asignaturas que se le asignaran al alumno
-                            $asignaturas = [];
-
-                            // obtienendo las asignaturas comunes del semestre
-                            $asignaturas = $semestreActual->plan_asignaturas()
-                                ->whereNull('idEspecilidad') // Solo las que no son de especialidad
-                                ->with('asignatura')          // Incluye la info de la asignatura
-                                ->get()
-                                ->pluck('asignatura')         // Extrae directamente las asignaturas
-                                ->toArray();
-
-
-
-                            // si viene la especialidad
-                            if ($semestreActual->numero >= 3 && $especialidadAlumno) {
-                                // registrando la especialidad del alumno
-                                $alumno->especialidads()->sync([$especialidadAlumno => ['semestreInicio' => $semestreActual ? $semestreActual->numero : 0]]);
-
-                                $materiasEspecialidad = $alumno->especialidads()
-                                    ->where('especialidad.id', $especialidadAlumno)
-                                    ->first()
-                                    ->plan_asignaturas()
-                                    ->where('idSemestre', $semestreActual->id)
-                                    ->with('asignatura')
-                                    ->get()
-                                    ->pluck('asignatura')
-                                    ->toArray();
-
-                                // combinamos las asignaturas del semestre con las de la especialidad
-                                $asignaturas = array_merge($asignaturas, $materiasEspecialidad);
-                            }
-
-                            $clases = [];
-                            // TODO: ver que salones existen y como lo voy a enviar
-                            // asignando las asignaturas al alumno
-                            foreach ($asignaturas as $asignatura) {
-                                $clase = $alumno
-                                    ->grupo_semestres()
-                                    ->where('grupo_semestre.id', $request->idGrupoSemestre)
-                                    ->first()
-                                    ->clases()->firstOrCreate([
-                                        'idAsignatura' => $asignatura['id'],
-                                        'idGrupoSemestre' => $request->idGrupoSemestre,
-                                        'idEspecialidad' => $asignatura['tipo'] == 'COMUN' ? null : ($especialidadAlumno ?? null),
-                                    ], ['salonClase' => $asignatura['tipo'] == 'COMUN' ? 'COMUN' . $request->idGrupoSemestre : 'ESP' . $request->idGrupoSemestre]);
-
-                                // guardamos la clase en el arreglo
-                                $clases[] = $clase;
-                            }
-
-                            foreach ($clases as $clase) {
-                                $clase->calificacions()->firstOrCreate([
-                                    'idAlumno' => $alumno->id,
-                                    'idClase' => $clase->id,
-                                ], [
-                                    'momento1' => 0,
-                                    'momento2' => 0,
-                                    'momento3' => 0,
-                                ]);
-                            }
-                        }
-                    }
+                } elseif ($rolCuenta === 'alumno') {
+                    $this->actualizarAlumno($request, $persona);
                 }
 
-                // volver a consultar al usuario con la estructura correcta
-                $query = DB::table('persona')
-                    ->join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
-                    ->join('direccion as d', 'persona.idDireccion', '=', 'd.id')
-                    ->join('localidad as l', 'd.idLocalidad', '=', 'l.id')
-                    ->join('municipio as m', 'l.idMunicipio', '=', 'm.id')
-                    ->where('persona.id', $persona->id)
-                    ->where('c.rol', $cuenta->rol);
+                // ============================================
+                // 5. RETORNAR DATOS ACTUALIZADOS
+                // ============================================
+                return $this->obtenerDatosUsuario($persona->id, $rolCuenta);
+            });
 
-                // Campos base comunes a todos los roles
-                $select = [
-                    'persona.id',
-                    'persona.nombre',
-                    'persona.apellidoPaterno',
-                    'persona.apellidoMaterno',
-                    'persona.curp',
-                    'persona.telefono',
-                    DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
-                    'persona.fechaNacimiento',
-                    'persona.nss',
-                    'c.correo',
-                    'c.rol',
-                    'm.id as idMunicipio',
-                    'm.nombre as municipio',
-                    'l.id as idLocalidad',
-                    'l.nombre as localidad',
-                    'l.codigoPostal',
-                    'd.numeroCasa',
-                    'd.calle',
-                ];
+            return response()->json([
+                'message' => 'Usuario actualizado con éxito',
+                'data' => $person
+            ]);
 
-                // Campos específicos según el rol
-                switch ($rolCUente) {
-                    case 'alumno':
-                        $query->join('alumno as a', 'persona.id', '=', 'a.idPersona');
-                        $query->join('alumno_grupo_semestre as ags', 'a.id', '=', 'ags.idAlumno');
-                        $query->join('grupo_semestre as gs', 'ags.idGrupoSemestre', '=', 'gs.id');
-                        $query->join('semestre as s', 'gs.idSemestre', '=', 's.id');
-                        $query->join('grupo as g', 'g.id', '=', 'gs.idGrupo');
-                        $query->join('alumno_generacion as ag', 'ag.idAlumno', '=', 'a.id');
-                        $query->join('generacion as gen', 'gen.id', '=', 'ag.idGeneracion');
-                        $query->leftJoin('alumno_especialidad as aesp', 'aesp.idAlumno', '=', 'a.id');
-                        $query->leftJoin('especialidad as esp', 'esp.id', '=', 'aesp.idEspecialidad');
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al actualizar el usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
-                        // Filtrar para traer solo el semestre con el número máximo (más grande) del alumno
-                        // Filtrar para traer solo el semestre con el número máximo (más grande) del alumno
-                        $query->whereRaw(
-                            's.numero = (
+// ============================================
+// MÉTODOS AUXILIARES
+// ============================================
+
+    private function actualizarDocente($request, $persona)
+    {
+        $docente = Docente::where('idPersona', $persona->id)->first();
+
+        if (!$docente) {
+            return;
+        }
+
+        $docenteData = $request->only(['cedulaProfesional', 'numeroExpediente']);
+
+        if (!empty($docenteData)) {
+            $docente->update($docenteData);
+        }
+    }
+
+    private function actualizarAlumno($request, $persona)
+    {
+        $alumno = Alumno::where('idPersona', $persona->id)->first();
+
+        if (!$alumno) {
+            return;
+        }
+
+        // Actualizar datos básicos del alumno
+        $alumnoData = $request->only(['nia', 'situacion']);
+        if (!empty($alumnoData)) {
+            $alumno->update($alumnoData);
+        }
+
+        // Si cambia de grupo-semestre
+        if ($request->has('idGrupoSemestre')) {
+            $this->cambiarGrupoSemestre($alumno, $request);
+        }
+
+        // Si cambia de especialidad (solo si está en 3er semestre o superior)
+        if ($request->has('idEspecialidad')) {
+            $this->cambiarEspecialidad($alumno, $request);
+        }
+    }
+
+    private function cambiarGrupoSemestre($alumno, $request)
+    {
+        $grupoSemestreAnterior = $alumno->grupo_semestres()->first();
+        $nuevoGrupoSemestreId = $request->idGrupoSemestre;
+
+        // Si no cambió, no hacer nada
+        if ($grupoSemestreAnterior && $grupoSemestreAnterior->id == $nuevoGrupoSemestreId) {
+            return;
+        }
+
+        // Actualizar relación grupo-semestre
+        $alumno->grupo_semestres()->sync([$nuevoGrupoSemestreId]);
+
+        // Obtener el nuevo semestre
+        $nuevoSemestre = $alumno->grupo_semestres()->first()?->semestre;
+
+        if (!$nuevoSemestre) {
+            throw new Exception('No se pudo obtener el semestre del nuevo grupo');
+        }
+
+        // Obtener especialidad actual del alumno
+        $especialidadAlumno = $alumno->especialidads()->first();
+        $anioActual = now()->year;
+
+        // Obtener las clases YA EXISTENTES para este grupo-semestre
+        $clasesDisponibles = Clase::where('idGrupoSemestre', $nuevoGrupoSemestreId)
+            ->where('anio', $anioActual)
+            ->where(function ($query) use ($especialidadAlumno) {
+                $query->whereNull('idEspecialidad'); // Tronco común
+
+                if ($especialidadAlumno) {
+                    $query->orWhere('idEspecialidad', $especialidadAlumno->id);
+                }
+            })
+            ->get();
+
+        if ($clasesDisponibles->isEmpty()) {
+            throw new Exception("No existen clases creadas para este grupo-semestre en el año {$anioActual}. Ejecute: php artisan clases:generar {$anioActual}");
+        }
+
+        // Crear calificaciones para las nuevas clases (solo si no existen)
+        foreach ($clasesDisponibles as $clase) {
+            $alumno->calificacions()->firstOrCreate([
+                'idAlumno' => $alumno->id,
+                'idClase' => $clase->id, // IMPORTANTE: usa idClase
+            ], [
+                'momento1' => 0,
+                'momento2' => 0,
+                'momento3' => 0,
+            ]);
+        }
+    }
+
+    private function cambiarEspecialidad($alumno, $request)
+    {
+        $semestreActual = $alumno->grupo_semestres()->first()?->semestre;
+
+        // Solo se puede tener especialidad desde 3er semestre
+        if (!$semestreActual || $semestreActual->numero < 3) {
+            return;
+        }
+
+        $especialidadAnterior = $alumno->especialidads()->first();
+        $nuevaEspecialidadId = $request->idEspecialidad;
+
+        // Si no cambió, no hacer nada
+        if ($especialidadAnterior && $especialidadAnterior->id == $nuevaEspecialidadId) {
+            return;
+        }
+
+        // Actualizar especialidad
+        $alumno->especialidads()->sync([
+            $nuevaEspecialidadId => ['semestreInicio' => $semestreActual->numero]
+        ]);
+
+        // Obtener grupo-semestre actual
+        $grupoSemestreId = $alumno->grupo_semestres()->first()->id;
+        $anioActual = now()->year;
+
+        // Obtener clases de la nueva especialidad
+        $clasesEspecialidad = Clase::where('idGrupoSemestre', $grupoSemestreId)
+            ->where('anio', $anioActual)
+            ->where('idEspecialidad', $nuevaEspecialidadId)
+            ->get();
+
+        if ($clasesEspecialidad->isEmpty()) {
+            throw new Exception("No existen clases de esta especialidad para este grupo-semestre en el año {$anioActual}");
+        }
+
+        // Crear calificaciones para las clases de especialidad
+        foreach ($clasesEspecialidad as $clase) {
+            $alumno->calificacions()->firstOrCreate([
+                'idAlumno' => $alumno->id,
+                'idClase' => $clase->id,
+            ], [
+                'momento1' => 0,
+                'momento2' => 0,
+                'momento3' => 0,
+            ]);
+        }
+
+        // OPCIONAL: Eliminar calificaciones de la especialidad anterior si existía
+        if ($especialidadAnterior) {
+            $clasesAnteriores = Clase::where('idGrupoSemestre', $grupoSemestreId)
+                ->where('anio', $anioActual)
+                ->where('idEspecialidad', $especialidadAnterior->id)
+                ->pluck('id');
+
+            // Eliminar calificaciones de la especialidad anterior
+            $alumno->calificacions()
+                ->whereIn('idClase', $clasesAnteriores)
+                ->delete();
+        }
+    }
+
+    private function obtenerDatosUsuario($personaId, $rol)
+    {
+        $query = DB::table('persona')
+            ->join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
+            ->join('direccion as d', 'persona.idDireccion', '=', 'd.id')
+            ->join('localidad as l', 'd.idLocalidad', '=', 'l.id')
+            ->join('municipio as m', 'l.idMunicipio', '=', 'm.id')
+            ->where('persona.id', $personaId)
+            ->where('c.rol', $rol);
+
+        $select = [
+            'persona.id',
+            'persona.nombre',
+            'persona.apellidoPaterno',
+            'persona.apellidoMaterno',
+            'persona.curp',
+            'persona.telefono',
+            DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+            'persona.fechaNacimiento',
+            'persona.nss',
+            'c.correo',
+            'c.rol',
+            'm.id as idMunicipio',
+            'm.nombre as municipio',
+            'l.id as idLocalidad',
+            'l.nombre as localidad',
+            'l.codigoPostal',
+            'd.numeroCasa',
+            'd.calle',
+        ];
+
+        switch ($rol) {
+            case 'alumno':
+                $query->join('alumno as a', 'persona.id', '=', 'a.idPersona')
+                    ->join('alumno_grupo_semestre as ags', 'a.id', '=', 'ags.idAlumno')
+                    ->join('grupo_semestre as gs', 'ags.idGrupoSemestre', '=', 'gs.id')
+                    ->join('semestre as s', 'gs.idSemestre', '=', 's.id')
+                    ->join('grupo as g', 'g.id', '=', 'gs.idGrupo')
+                    ->join('alumno_generacion as ag', 'ag.idAlumno', '=', 'a.id')
+                    ->join('generacion as gen', 'gen.id', '=', 'ag.idGeneracion')
+                    ->leftJoin('alumno_especialidad as aesp', 'aesp.idAlumno', '=', 'a.id')
+                    ->leftJoin('especialidad as esp', 'esp.id', '=', 'aesp.idEspecialidad');
+
+                $query->whereRaw('s.numero = (
                 SELECT MAX(se.numero)
                 FROM semestre se
                 JOIN grupo_semestre gs2 ON se.id = gs2.idSemestre
                 JOIN alumno_grupo_semestre ags2 ON gs2.id = ags2.idGrupoSemestre
                 JOIN alumno a2 ON ags2.idAlumno = a2.id
                 WHERE a2.idPersona = ?
-            )',
-                            [$persona->id]
-                        );
+            )', [$personaId]);
 
-                        $select[] = 'a.nia';
-                        $select[] = 'a.situacion';
-                        $select[] = 'gs.id as idGrupoSemestre';
-                        $select[] = 's.numero as numeroSemestre';
-                        $select[] = 's.periodo as periodoSemestre';
-                        $select[] = 'gen.id as idGeneracion';
-                        $select[] = 'gen.fechaIngreso as fechaIngresoGeneracion';
-                        $select[] = 'gen.fechaEgreso as fechaEgresoGeneracion';
-                        $select[] = 'esp.id as idEspecialidad';
-                        $select[] = 'esp.nombre as especialidadNombre';
-                        break;
+                $select = array_merge($select, [
+                    'a.nia',
+                    'a.situacion',
+                    'gs.id as idGrupoSemestre',
+                    's.numero as numeroSemestre',
+                    'gen.id as idGeneracion',
+                    'gen.fechaIngreso as fechaIngresoGeneracion',
+                    'gen.fechaEgreso as fechaEgresoGeneracion',
+                    'esp.id as idEspecialidad',
+                    'esp.nombre as especialidadNombre',
+                ]);
+                break;
 
-                    case 'docente':
-                        $query->join('docente as dc', 'persona.id', '=', 'dc.idPersona');
-                        $select[] = 'dc.cedulaProfesional';
-                        $select[] = 'dc.numeroExpediente';
-                        break;
-                }
-
-                return $query->select($select)->first();
-            });
-
-            return response()->json([
-                'message' => 'Usuario actualizado con éxito',
-                'data' => $persona
-            ]);
-
-        } catch
-        (Exception $e) {
-            return response()->json([
-                'message' => 'Error al actualizar el usuario',
-                'error' => $e->getMessage(),
-            ], 500);
+            case 'docente':
+                $query->join('docente as dc', 'persona.id', '=', 'dc.idPersona');
+                $select = array_merge($select, [
+                    'dc.cedulaProfesional',
+                    'dc.numeroExpediente',
+                ]);
+                break;
         }
+
+        return $query->select($select)->first();
     }
 
     /**
@@ -784,9 +764,6 @@ class UserController extends Controller
                         DB::table('alumno_especialidad')->whereIn('idAlumno', $alumnoIds)->delete();
                         DB::table('alumno_generacion')->whereIn('idAlumno', $alumnoIds)->delete();
                         DB::table('alumno_grupo_semestre')->whereIn('idAlumno', $alumnoIds)->delete();
-
-                        // alumno_ciclo tiene CASCADE, pero lo incluimos por seguridad
-                        DB::table('alumno_ciclo')->whereIn('idAlumno', $alumnoIds)->delete();
 
                         // Otras tablas relacionadas
                         DB::table('calificacion')->whereIn('idAlumno', $alumnoIds)->delete();
@@ -894,5 +871,30 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function getDocentes()
+    {
+        $docentes = DB::table('docente as d')
+            ->join('persona as p', 'd.idPersona', '=', 'p.id')
+            ->join('cuenta as c', 'p.idCuenta', '=', 'c.id')
+            ->select(
+                'd.id',
+                DB::raw("CONCAT(p.nombre, ' ', p.apellidoPaterno, ' ', p.apellidoMaterno) as nombreCompleto"),
+                'p.nombre',
+                'p.apellidoPaterno',
+                'p.apellidoMaterno',
+                'd.cedulaProfesional',
+                'c.correo'
+            )
+            ->whereNull('c.deleted_at')
+            ->orderBy('p.apellidoPaterno')
+            ->get();
+
+        return response()->json([
+            'message' => 'Docentes recuperados con éxito',
+            'data' => $docentes
+        ]);
+
     }
 }

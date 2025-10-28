@@ -138,7 +138,7 @@ class AlumnoController extends Controller
 
                 // obtienendo las asignaturas comunes del semestre
                 $asignaturas = $semestre->plan_asignaturas()
-                    ->whereNull('idEspecilidad') // Solo las que no son de especialidad
+                    ->whereNull('idEspecialidad') // Solo las que no son de especialidad
                     ->with('asignatura')          // Incluye la info de la asignatura
                     ->get()
                     ->pluck('asignatura')         // Extrae directamente las asignaturas

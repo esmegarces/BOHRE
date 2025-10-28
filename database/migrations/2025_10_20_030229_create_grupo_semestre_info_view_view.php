@@ -14,7 +14,46 @@ return new class extends Migration
     {
         $dbName = DB::getDatabaseName();
 
-        DB::statement("CREATE VIEW `grupo_semestre_info_view` AS select `gs`.`id` AS `idGrupoSemestre`,`g`.`id` AS `idGrupo`,`s`.`id` AS `idSemestre`,`g`.`prefijo` AS `grupo`,`s`.`numero` AS `semestre`,`s`.`periodo` AS `periodoSemestre`,count(distinct `ags`.`idAlumno`) AS `numeroAlumnos`,count(distinct `pa`.`idAsignatura`) AS `numeroAsignaturas` from ((((`{$dbName}`.`grupo_semestre` `gs` join `{$dbName}`.`grupo` `g` on((`gs`.`idGrupo` = `g`.`id`))) join `{$dbName}`.`semestre` `s` on((`gs`.`idSemestre` = `s`.`id`))) left join `{$dbName}`.`alumno_grupo_semestre` `ags` on((`ags`.`idGrupoSemestre` = `gs`.`id`))) join `{$dbName}`.`plan_asignatura` `pa` on((`s`.`id` = `pa`.`idSemestre`))) where ((`pa`.`idEspecilidad` is null) and (lower(`s`.`periodo`) = (case when (curdate() <= concat(year(curdate()),'-08-01')) then 'feb/ago' else 'ago/dic' end))) group by `gs`.`id`,`g`.`id`,`s`.`id`,`g`.`prefijo`,`s`.`numero`,`s`.`periodo` order by `s`.`numero`");
+        DB::statement("
+            CREATE OR REPLACE VIEW `{$dbName}`.`grupo_semestre_info_view` AS
+            SELECT
+                `gs`.`id` AS `idGrupoSemestre`,
+                `g`.`id` AS `idGrupo`,
+                `s`.`id` AS `idSemestre`,
+                `g`.`prefijo` AS `grupo`,
+                `s`.`numero` AS `semestre`,
+                CONCAT(LPAD(`s`.`diaInicio`, 2, '0'), '-', LPAD(`s`.`mesInicio`, 2, '0'), ' / ',
+                       LPAD(`s`.`diaFin`, 2, '0'), '-', LPAD(`s`.`mesFin`, 2, '0')) AS `periodoSemestre`,
+                COUNT(DISTINCT `ags`.`idAlumno`) AS `numeroAlumnos`,
+                COUNT(DISTINCT `cl`.`idAsignatura`) AS `numeroAsignaturas`,
+                (CASE
+                    WHEN `s`.`mesFin` < `s`.`mesInicio` THEN
+                        CONCAT(YEAR(CURDATE()), '-', YEAR(CURDATE()) + 1)
+                    ELSE
+                        CAST(YEAR(CURDATE()) AS CHAR)
+                END) AS `cicloEscolar`
+            FROM `{$dbName}`.`grupo_semestre` `gs`
+            INNER JOIN `{$dbName}`.`grupo` `g` ON `gs`.`idGrupo` = `g`.`id`
+            INNER JOIN `{$dbName}`.`semestre` `s` ON `gs`.`idSemestre` = `s`.`id`
+            LEFT JOIN `{$dbName}`.`alumno_grupo_semestre` `ags` ON `ags`.`idGrupoSemestre` = `gs`.`id`
+            LEFT JOIN `{$dbName}`.`clase` `cl` ON `cl`.`idGrupoSemestre` = `gs`.`id`
+                AND `cl`.`anio` = YEAR(CURDATE())
+                AND `cl`.`idEspecialidad` IS NULL
+            WHERE
+                CURDATE() BETWEEN
+                    CAST(CONCAT(YEAR(CURDATE()), '-', LPAD(`s`.`mesInicio`, 2, '0'), '-',
+                                LPAD(`s`.`diaInicio`, 2, '0')) AS DATE)
+                AND
+                    CAST(CONCAT(
+                        (CASE WHEN `s`.`mesFin` < `s`.`mesInicio`
+                              THEN YEAR(CURDATE()) + 1
+                              ELSE YEAR(CURDATE()) END),
+                        '-', LPAD(`s`.`mesFin`, 2, '0'), '-', LPAD(`s`.`diaFin`, 2, '0')
+                    ) AS DATE)
+            GROUP BY `gs`.`id`, `g`.`id`, `s`.`id`, `g`.`prefijo`, `s`.`numero`,
+                     `s`.`diaInicio`, `s`.`mesInicio`, `s`.`diaFin`, `s`.`mesFin`
+            ORDER BY `s`.`numero`
+        ");
     }
 
     /**

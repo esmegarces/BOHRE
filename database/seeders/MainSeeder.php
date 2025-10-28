@@ -21,12 +21,12 @@ class MainSeeder extends Seeder
                 LocalidadSeeder::class,
                 GrupoSeeder::class,
                 SemestreSeeder::class,
-                CicloEscolarSeeder::class,
                 GeneracionSeeder::class,
                 EspecialidadesSeeder::class,
                 AsignaturasSeeder::class,
                 PlanAsignaturaSeeder::class,
                 GrupoSemestreSeeder::class,
+//                ClaseSeeder::class,
             ]);
         });
     }

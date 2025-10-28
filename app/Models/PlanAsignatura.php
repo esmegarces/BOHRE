@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class PlanAsignatura
- * 
+ *
  * @property int $id
  * @property int $idAsignatura
  * @property int $idSemestre
  * @property int|null $idEspecilidad
- * 
+ *
  * @property Asignatura $asignatura
  * @property Semestre $semestre
  * @property Especialidad|null $especialidad
@@ -30,13 +30,13 @@ class PlanAsignatura extends Model
 	protected $casts = [
 		'idAsignatura' => 'int',
 		'idSemestre' => 'int',
-		'idEspecilidad' => 'int'
+		'idEspecialidad' => 'int'
 	];
 
 	protected $fillable = [
 		'idAsignatura',
 		'idSemestre',
-		'idEspecilidad'
+		'idEspecialidad'
 	];
 
 	public function asignatura()
@@ -51,6 +51,6 @@ class PlanAsignatura extends Model
 
 	public function especialidad()
 	{
-		return $this->belongsTo(Especialidad::class, 'idEspecilidad');
+		return $this->belongsTo(Especialidad::class, 'idEspecialidad');
 	}
 }
