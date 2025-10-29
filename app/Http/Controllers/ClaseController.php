@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/ClaseController.php
 
 namespace App\Http\Controllers;
 
@@ -15,8 +16,8 @@ class ClaseController extends Controller
     }
 
     /**
-     * Endpoint para generar clases desde el frontend.
-     * GET o POST /api/clases/generar
+     * Endpoint para generar clases Y migrar alumnos automáticamente.
+     * POST /api/clases/generar
      */
     public function generar(Request $request)
     {
@@ -25,8 +26,15 @@ class ClaseController extends Controller
 
             $resultado = $this->service->generarClases($semestres);
 
+            if (!$resultado['success']) {
+                return response()->json([
+                    'message' => 'Error al generar clases',
+                    'data' => $resultado
+                ], 500);
+            }
+
             return response()->json([
-                'message' => 'Clases generadas correctamente',
+                'message' => 'Clases generadas y alumnos migrados correctamente',
                 'data' => $resultado
             ]);
 
@@ -35,7 +43,6 @@ class ClaseController extends Controller
                 'message' => 'Error al generar las clases: ' . $e->getMessage()
             ], 500);
         }
-
     }
 
     /**

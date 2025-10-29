@@ -1,13 +1,18 @@
 <?php
+// app/Services/ClaseGeneratorService.php
 
 namespace App\Services;
 
+use App\Models\Alumno;
+use App\Models\Calificacion;
 use App\Models\Clase;
 use App\Models\Especialidad;
 use App\Models\GrupoSemestre;
 use App\Models\PlanAsignatura;
 use App\Models\Semestre;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ClaseGeneratorService
 {
@@ -46,76 +51,288 @@ class ClaseGeneratorService
         $inicio = Carbon::create($anioInicio, $semestre->mesInicio, $semestre->diaInicio);
         $fin = Carbon::create($anioFin, $semestre->mesFin, $semestre->diaFin);
 
-        // Solo generar si hoy está entre inicio y fin
         return $hoy->between($inicio, $fin);
     }
 
     /**
-     * Genera las clases correspondientes para los semestres activos.
+     * Genera las clases y migra automáticamente a los alumnos.
      */
     public function generarClases(?array $semestresInput = null): array
     {
-        $anio = Carbon::now()->year;
+        DB::beginTransaction();
 
-        // Detectar semestres activos si no se pasaron explícitamente
-        $semestresActivos = $semestresInput ?: $this->detectarSemestresActivos();
+        try {
+            $anio = Carbon::now()->year;
 
-        $totalClases = 0;
-        $detalle = [];
+            // Detectar semestres activos si no se pasaron explícitamente
+            $semestresActivos = $semestresInput ?: $this->detectarSemestresActivos();
 
-        foreach ($semestresActivos as $numeroSemestre) {
-            $semestre = Semestre::where('numero', $numeroSemestre)->first();
-            if (!$semestre) continue;
+            $totalClases = 0;
+            $detalleClases = [];
 
-            $gruposSemestre = GrupoSemestre::where('idSemestre', $semestre->id)->get();
+            // Resultados de migración
+            $alumnosMigrados = 0;
+            $alumnosGraduados = 0;
+            $detalleMigracion = [];
 
-            foreach ($gruposSemestre as $gs) {
-                // Materias troncales
-                $materiasTronco = PlanAsignatura::where('idSemestre', $semestre->id)
-                    ->whereNull('idEspecialidad')
+            foreach ($semestresActivos as $numeroSemestre) {
+                $semestre = Semestre::where('numero', $numeroSemestre)->first();
+                if (!$semestre) continue;
+
+                $gruposSemestre = GrupoSemestre::where('idSemestre', $semestre->id)
+                    ->with('grupo')
                     ->get();
 
-                foreach ($materiasTronco as $planAsignatura) {
-                    Clase::firstOrCreate([
-                        'idAsignatura' => $planAsignatura->idAsignatura,
-                        'idGrupoSemestre' => $gs->id,
-                        'idEspecialidad' => null,
-                        'anio' => $anio
-                    ]);
-                    $totalClases++;
-                }
+                foreach ($gruposSemestre as $gs) {
+                    // ============================================
+                    // 1. GENERAR CLASES (Tronco común)
+                    // ============================================
+                    $materiasTronco = PlanAsignatura::where('idSemestre', $semestre->id)
+                        ->whereNull('idEspecialidad')
+                        ->get();
 
-                // Materias por especialidad (solo 3° o superior)
-                if ($semestre->numero >= 3) {
-                    foreach (Especialidad::pluck('id') as $idEspecialidad) {
-                        $materiasEsp = PlanAsignatura::where('idSemestre', $semestre->id)
-                            ->where('idEspecialidad', $idEspecialidad)
-                            ->get();
+                    foreach ($materiasTronco as $planAsignatura) {
+                        $clase = Clase::firstOrCreate([
+                            'idAsignatura' => $planAsignatura->idAsignatura,
+                            'idGrupoSemestre' => $gs->id,
+                            'idEspecialidad' => null,
+                            'anio' => $anio
+                        ]);
+                        $totalClases++;
+                    }
 
-                        foreach ($materiasEsp as $planAsignatura) {
-                            Clase::firstOrCreate([
-                                'idAsignatura' => $planAsignatura->idAsignatura,
-                                'idGrupoSemestre' => $gs->id,
-                                'idEspecialidad' => $idEspecialidad,
-                                'anio' => $anio
-                            ]);
-                            $totalClases++;
+                    // ============================================
+                    // 2. GENERAR CLASES (Especialidades)
+                    // ============================================
+                    if ($semestre->numero >= 3) {
+                        foreach (Especialidad::pluck('id') as $idEspecialidad) {
+                            $materiasEsp = PlanAsignatura::where('idSemestre', $semestre->id)
+                                ->where('idEspecialidad', $idEspecialidad)
+                                ->get();
+
+                            foreach ($materiasEsp as $planAsignatura) {
+                                Clase::firstOrCreate([
+                                    'idAsignatura' => $planAsignatura->idAsignatura,
+                                    'idGrupoSemestre' => $gs->id,
+                                    'idEspecialidad' => $idEspecialidad,
+                                    'anio' => $anio
+                                ]);
+                                $totalClases++;
+                            }
+                        }
+                    }
+
+                    $detalleClases[] = [
+                        'semestre' => $semestre->numero,
+                        'grupo' => $gs->grupo->prefijo,
+                        'idGrupoSemestre' => $gs->id
+                    ];
+
+                    // ============================================
+                    // 3. MIGRAR ALUMNOS DEL SEMESTRE ANTERIOR
+                    // ============================================
+                    if ($numeroSemestre > 1 && $numeroSemestre <= 6) {
+                        $migracion = $this->migrarAlumnosAGrupoSemestre(
+                            $numeroSemestre - 1, // semestre anterior
+                            $gs,
+                            $anio
+                        );
+
+                        if ($migracion['alumnosMigrados'] > 0) {
+                            $alumnosMigrados += $migracion['alumnosMigrados'];
+                            $detalleMigracion[] = $migracion;
                         }
                     }
                 }
-
-                $detalle[] = [
-                    'semestre' => $semestre->numero,
-                    'grupo' => $gs->grupo->prefijo,
-                ];
             }
+
+            // ============================================
+            // 4. GRADUAR ALUMNOS DE 6TO SEMESTRE
+            // ============================================
+            if (in_array(6, $semestresActivos)) {
+                $graduacion = $this->graduarAlumnosSextoSemestre();
+                $alumnosGraduados = $graduacion['total'];
+
+                if ($graduacion['total'] > 0) {
+                    $detalleMigracion[] = $graduacion;
+                }
+            }
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'anio' => $anio,
+                'semestres' => $semestresActivos,
+                'clases' => [
+                    'total' => $totalClases,
+                    'detalle' => $detalleClases
+                ],
+                'migracion' => [
+                    'alumnosMigrados' => $alumnosMigrados,
+                    'alumnosGraduados' => $alumnosGraduados,
+                    'detalle' => $detalleMigracion
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al generar clases y migrar alumnos: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Migra alumnos del semestre anterior a un grupo-semestre específico.
+     */
+
+
+    // Buscar el método migrarAlumnosAGrupoSemestre y actualizar la query de alumnos:
+    private function migrarAlumnosAGrupoSemestre(int $semestreAnterior, GrupoSemestre $gsDestino, int $anio): array
+    {
+        // Buscar el grupo-semestre del semestre anterior con el mismo grupo
+        $gsFuente = GrupoSemestre::whereHas('semestre', function ($q) use ($semestreAnterior) {
+            $q->where('numero', $semestreAnterior);
+        })
+            ->where('idGrupo', $gsDestino->idGrupo)
+            ->first();
+
+        if (!$gsFuente) {
+            return [
+                'tipo' => 'migracion',
+                'semestreFuente' => $semestreAnterior,
+                'semestreDestino' => $gsDestino->semestre->numero,
+                'grupo' => $gsDestino->grupo->prefijo,
+                'alumnosMigrados' => 0,
+                'alumnos' => []
+            ];
+        }
+
+        // Obtener alumnos activos del grupo fuente (EXCLUYENDO ELIMINADOS)
+        $alumnos = Alumno::whereHas('grupo_semestres', function ($q) use ($gsFuente) {
+            $q->where('grupo_semestre.id', $gsFuente->id);
+        })
+            ->whereHas('persona', function ($q) {
+                $q->whereNull('deleted_at'); // ← FILTRO PERSONAS ELIMINADAS
+            })
+            ->whereHas('persona.cuentum', function ($q) {
+                $q->whereNull('deleted_at'); // ← FILTRO CUENTAS ELIMINADAS
+            })
+            ->where('situacion', 'ACTIVO')
+            ->with(['persona' => function ($q) {
+                $q->whereNull('deleted_at'); // ← CARGAR SOLO PERSONAS NO ELIMINADAS
+            }, 'especialidads'])
+            ->get();
+
+        $alumnosMigrados = [];
+
+        foreach ($alumnos as $alumno) {
+            // Validación adicional por si acaso
+            if (!$alumno->persona || $alumno->persona->deleted_at) {
+                continue;
+            }
+
+            // 1. Cambiar al nuevo grupo-semestre
+            $alumno->grupo_semestres()->sync([$gsDestino->id]);
+
+            // 2. Crear calificaciones en las nuevas clases
+            $this->crearCalificacionesParaAlumno($alumno, $gsDestino, $anio);
+
+            $alumnosMigrados[] = [
+                'nia' => $alumno->nia,
+                'nombre' => $alumno->persona->nombre . ' ' .
+                    $alumno->persona->apellidoPaterno . ' ' .
+                    $alumno->persona->apellidoMaterno
+            ];
         }
 
         return [
-            'anio' => $anio,
-            'semestres' => $semestresActivos,
-            'total' => $totalClases,
-            'detalle' => $detalle,
+            'tipo' => 'migracion',
+            'semestreFuente' => $semestreAnterior,
+            'semestreDestino' => $gsDestino->semestre->numero,
+            'grupo' => $gsDestino->grupo->prefijo,
+            'alumnosMigrados' => count($alumnosMigrados),
+            'alumnos' => $alumnosMigrados
+        ];
+    }
+
+    /**
+     * Crea calificaciones para un alumno en las clases del grupo-semestre.
+     */
+    private function crearCalificacionesParaAlumno(Alumno $alumno, GrupoSemestre $gsDestino, int $anio): void
+    {
+        // Obtener especialidad del alumno
+        $especialidad = $alumno->especialidads()->first();
+
+        // Obtener clases disponibles para este grupo-semestre
+        $clases = Clase::where('idGrupoSemestre', $gsDestino->id)
+            ->where('anio', $anio)
+            ->where(function ($query) use ($especialidad) {
+                $query->whereNull('idEspecialidad'); // Tronco común
+
+                if ($especialidad) {
+                    $query->orWhere('idEspecialidad', $especialidad->id);
+                }
+            })
+            ->get();
+
+        // Crear calificaciones iniciales (0, 0, 0)
+        foreach ($clases as $clase) {
+            Calificacion::firstOrCreate([
+                'idAlumno' => $alumno->id,
+                'idClase' => $clase->id
+            ], [
+                'momento1' => 0,
+                'momento2' => 0,
+                'momento3' => 0
+            ]);
+        }
+    }
+
+    /**
+     * Gradúa alumnos de 6to semestre cambiando su situación a EGRESADO.
+     */
+    private function graduarAlumnosSextoSemestre(): array
+    {
+        $alumnosGraduados = [];
+
+        // Obtener todos los alumnos de 6to semestre activos (EXCLUYENDO ELIMINADOS)
+        $alumnos = Alumno::whereHas('grupo_semestres.semestre', function ($q) {
+            $q->where('numero', 6);
+        })
+            ->whereHas('persona', function ($q) {
+                $q->whereNull('deleted_at'); // ← FILTRO PERSONAS ELIMINADAS
+            })
+            ->whereHas('persona.cuentum', function ($q) {
+                $q->whereNull('deleted_at'); // ← FILTRO CUENTAS ELIMINADAS
+            })
+            ->where('situacion', 'ACTIVO')
+            ->with(['persona' => function ($q) {
+                $q->whereNull('deleted_at');
+            }])
+            ->get();
+
+        foreach ($alumnos as $alumno) {
+            // Validación adicional
+            if (!$alumno->persona || $alumno->persona->deleted_at) {
+                continue;
+            }
+
+            // Cambiar situación a EGRESADO
+            $alumno->update(['situacion' => 'EGRESADO']);
+
+            $alumnosGraduados[] = [
+                'nia' => $alumno->nia,
+                'nombre' => $alumno->persona->nombre . ' ' .
+                    $alumno->persona->apellidoPaterno . ' ' .
+                    $alumno->persona->apellidoMaterno
+            ];
+        }
+
+        return [
+            'tipo' => 'graduacion',
+            'total' => count($alumnosGraduados),
+            'alumnos' => $alumnosGraduados
         ];
     }
 }

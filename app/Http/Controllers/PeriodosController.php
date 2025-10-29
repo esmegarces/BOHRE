@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Generacion;
 use App\Models\GrupoSemestre;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,8 +46,33 @@ class PeriodosController extends Controller
     public function getGrupoSemestre()
     {
         // Obtener todos los grupos semestre con la información requerida
+        $hoy = Carbon::now();
+        $anioActual = $hoy->year;
+
         $gruposSemestres = GrupoSemestre::join('grupo as g', 'grupo_semestre.idGrupo', '=', 'g.id')
             ->join('semestre as s', 'grupo_semestre.idSemestre', '=', 's.id')
+            ->whereRaw("
+        CURDATE() BETWEEN
+            CAST(CONCAT(
+                YEAR(CURDATE()),
+                '-',
+                LPAD(s.mesInicio, 2, '0'),
+                '-',
+                LPAD(s.diaInicio, 2, '0')
+            ) AS DATE)
+        AND
+            CAST(CONCAT(
+                (CASE
+                    WHEN s.mesFin < s.mesInicio
+                    THEN YEAR(CURDATE()) + 1
+                    ELSE YEAR(CURDATE())
+                END),
+                '-',
+                LPAD(s.mesFin, 2, '0'),
+                '-',
+                LPAD(s.diaFin, 2, '0')
+            ) AS DATE)
+    ")
             ->select(
                 'grupo_semestre.id',
                 'g.prefijo AS nombreGrupo',
@@ -56,16 +82,16 @@ class PeriodosController extends Controller
             ->orderBy('s.numero', 'asc')
             ->get();
 
-        // Verificar si se encontraron grupos semestre
+// Verificar si se encontraron grupos semestre
         if ($gruposSemestres->isEmpty()) {
             return response()->json([
-                'message' => 'No se encontraron grupos semestre.',
+                'message' => 'No hay grupos-semestre activos en este momento. Ejecute: POST /api/clases/generar para crear las clases del ciclo actual.',
                 'data' => null
             ], 404);
         }
 
         return response()->json([
-            'message' => 'Grupos semestre obtenidos exitosamente.',
+            'message' => 'Grupos-Semestre obtenidos exitosamente.',
             'data' => $gruposSemestres
         ]);
     }
