@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('idAlumno')->index('idAlumno');
             $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
+            $table->unique(['idAlumno', 'idGrupoSemestre'], 'unique_alumno_grupo');
         });
     }
 

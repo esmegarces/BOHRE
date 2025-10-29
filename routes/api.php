@@ -52,6 +52,6 @@ Route::get('/gruposemestresinfo', [\App\Http\Controllers\GrupoSemestreInfoViewCo
 Route::get('/gruposemestresinfo/{id}', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'showExtraInfo']);
 Route::patch('/clases/{idClase}/asignar-docente', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'asignarDocente']);
 Route::get('/clases/{idClase}/calificaciones', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'getCalificaciones']);
-
-
+Route::get('/especialidades/{id}', [\App\Http\Controllers\GrupoSemestreInfoViewController::class, 'getDetailsCalificationsByEspecialidad']);
+Route::post('/clases/generar', [\App\Http\Controllers\ClaseController::class, 'generar']);
 

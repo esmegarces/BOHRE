@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AlumnosGruposView;
 use App\Models\Clase;
+use App\Models\Especialidad;
 use App\Models\GrupoSemestreInfoView;
 use App\Models\VistaAsignatura;
 use App\Models\VistaClasesGrupoSemestre;
@@ -65,7 +66,7 @@ class GrupoSemestreInfoViewController extends Controller
                         "clasesConDocente" => 0,
                         "clasesSinDocente" => 0
                     ],
-                    "advertencia" => "No hay clases creadas. Ejecute: php artisan clases:generar {$anioActual}"
+                    "advertencia" => "No hay clases creadas {$anioActual}."
                 ]
             ], 200);
         }
@@ -232,6 +233,152 @@ class GrupoSemestreInfoViewController extends Controller
                         : null
                 ],
                 'calificaciones' => $calificaciones,
+                'estadisticas' => $estadisticas
+            ]
+        ]);
+    }
+
+    public function getDetailsCalificationsByEspecialidad(int $id): JsonResponse
+    {
+        $especialidad = Especialidad::find($id);
+
+        if (!$especialidad) {
+            return response()->json([
+                'message' => 'Especialidad no encontrada'
+            ], 404);
+        }
+
+        $anioActual = now()->year;
+
+        // Obtener clases de esta especialidad
+        $clases = DB::table('clase as cl')
+            ->join('grupo_semestre as gs', 'cl.idGrupoSemestre', '=', 'gs.id')
+            ->join('semestre as s', 'gs.idSemestre', '=', 's.id')
+            ->join('grupo as g', 'gs.idGrupo', '=', 'g.id')
+            ->join('asignatura as a', 'cl.idAsignatura', '=', 'a.id')
+            ->leftJoin('docente as d', 'cl.idDocente', '=', 'd.id')
+            ->leftJoin('persona as p', 'd.idPersona', '=', 'p.id')
+            ->where('cl.idEspecialidad', $id)
+            ->where('cl.anio', $anioActual)
+            ->select(
+                'cl.id as idClase',
+                'cl.anio',
+                'gs.id as idGrupoSemestre',
+                's.numero as semestre',
+                'g.prefijo as grupo',
+                'a.id as idAsignatura',
+                'a.nombre as nombreAsignatura',
+                'a.tipo as tipoAsignatura',
+                'd.id as idDocente',
+                DB::raw("CONCAT_WS(' ', p.nombre, p.apellidoPaterno, p.apellidoMaterno) as nombreDocente"),
+                DB::raw("(SELECT COUNT(DISTINCT cal.idAlumno)
+                         FROM calificacion cal
+                         WHERE cal.idClase = cl.id) as alumnosInscritos")
+            )
+            ->orderBy('s.numero')
+            ->orderBy('g.prefijo')
+            ->orderBy('a.nombre')
+            ->get();
+
+        // Agrupar por semestre y grupo
+        $clasesPorSemestreGrupo = $clases->groupBy(function($clase) {
+            return $clase->semestre . '-' . $clase->grupo;
+        })->map(function($grupo) {
+            $primera = $grupo->first();
+            return [
+                'semestre' => $primera->semestre,
+                'grupo' => $primera->grupo,
+                'idGrupoSemestre' => $primera->idGrupoSemestre,
+                'clases' => $grupo->map(function($clase) {
+                    return [
+                        'idClase' => $clase->idClase,
+                        'anio' => $clase->anio,
+                        'idAsignatura' => $clase->idAsignatura,
+                        'nombreAsignatura' => $clase->nombreAsignatura,
+                        'tipoAsignatura' => $clase->tipoAsignatura,
+                        'idDocente' => $clase->idDocente,
+                        'nombreDocente' => $clase->nombreDocente,
+                        'alumnosInscritos' => $clase->alumnosInscritos
+                    ];
+                })->values()
+            ];
+        })->values();
+
+        // Obtener alumnos inscritos en esta especialidad
+        $alumnos = DB::table('alumno_especialidad as ae')
+            ->join('alumno as a', 'ae.idAlumno', '=', 'a.id')
+            ->join('persona as p', 'a.idPersona', '=', 'p.id')
+            ->join('alumno_grupo_semestre as ags', 'a.id', '=', 'ags.idAlumno')
+            ->join('grupo_semestre as gs', 'ags.idGrupoSemestre', '=', 'gs.id')
+            ->join('semestre as s', 'gs.idSemestre', '=', 's.id')
+            ->join('grupo as g', 'gs.idGrupo', '=', 'g.id')
+            ->where('ae.idEspecialidad', $id)
+            ->select(
+                'a.id as idAlumno',
+                'a.nia',
+                'p.nombre',
+                'p.apellidoPaterno',
+                'p.apellidoMaterno',
+                DB::raw("CONCAT(p.nombre, ' ', p.apellidoPaterno, ' ', p.apellidoMaterno) as nombreCompleto"),
+                's.numero as semestre',
+                'g.prefijo as grupo',
+                'gs.id as idGrupoSemestre',
+                'ae.semestreInicio'
+            )
+            ->orderBy('s.numero')
+            ->orderBy('g.prefijo')
+            ->orderBy('p.apellidoPaterno')
+            ->get();
+
+        // Agrupar alumnos por semestre-grupo
+        $alumnosPorSemestreGrupo = $alumnos->groupBy(function($alumno) {
+            return $alumno->semestre . '-' . $alumno->grupo;
+        })->map(function($grupo) {
+            return $grupo->map(function($alumno) {
+                return [
+                    'idAlumno' => $alumno->idAlumno,
+                    'nia' => $alumno->nia,
+                    'nombreCompleto' => $alumno->nombreCompleto,
+                    'semestreInicio' => $alumno->semestreInicio
+                ];
+            })->values();
+        });
+
+        // Estadísticas generales
+        $estadisticas = [
+            'totalClases' => $clases->count(),
+            'clasesConDocente' => $clases->whereNotNull('idDocente')->count(),
+            'clasesSinDocente' => $clases->whereNull('idDocente')->count(),
+            'totalAlumnos' => $alumnos->count(),
+            'semestreGrupos' => $clasesPorSemestreGrupo->count()
+        ];
+
+        // Plan de estudios de la especialidad
+        $planEstudios = DB::table('plan_asignatura as pa')
+            ->join('asignatura as a', 'pa.idAsignatura', '=', 'a.id')
+            ->join('semestre as s', 'pa.idSemestre', '=', 's.id')
+            ->where('pa.idEspecialidad', $id)
+            ->select(
+                's.numero as semestre',
+                'a.id as idAsignatura',
+                'a.nombre as nombreAsignatura'
+            )
+            ->orderBy('s.numero')
+            ->orderBy('a.nombre')
+            ->get()
+            ->groupBy('semestre');
+
+        return response()->json([
+            'message' => 'Información de especialidad recuperada con éxito',
+            'data' => [
+                'especialidad' => [
+                    'id' => $especialidad->id,
+                    'nombre' => $especialidad->nombre
+                ],
+                'anio' => $anioActual,
+                'clasesPorSemestreGrupo' => $clasesPorSemestreGrupo,
+                'alumnosPorSemestreGrupo' => $alumnosPorSemestreGrupo,
+                'planEstudios' => $planEstudios,
                 'estadisticas' => $estadisticas
             ]
         ]);
