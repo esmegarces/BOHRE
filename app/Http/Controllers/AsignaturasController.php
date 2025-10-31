@@ -7,10 +7,15 @@ use App\Http\Requests\UpdateAsignaturaRequest;
 use App\Models\Asignatura;
 use App\Models\VistaAsignatura;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class AsignaturasController extends Controller
 {
+    /**
+     * Obtener todas las asignaturas
+     * @return JsonResponse
+     */
     public function index()
     {
         $asignaturas = Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
@@ -41,6 +46,11 @@ class AsignaturasController extends Controller
         ]);
     }
 
+    /**
+     * recuperar la informacion de una asignatura por id
+     * @param int $id
+     * @return JsonResponse
+     */
     public function show(int $id)
     {
         $asignatura = Asignatura::join('plan_asignatura as pa', 'asignatura.id', '=', 'pa.idAsignatura')
@@ -71,6 +81,12 @@ class AsignaturasController extends Controller
         ]);
     }
 
+    /**
+     * Registrar una nueva asignatura
+     * @param StoreAsignaturaRequest $request
+     * @return JsonResponse
+     * @throws \Throwable
+     */
     public function store(StoreAsignaturaRequest $request)
     {
         try {
@@ -115,6 +131,13 @@ class AsignaturasController extends Controller
 
     }
 
+    /**
+     * actualizar una asignatura
+     * @param UpdateAsignaturaRequest $request
+     * @param $id
+     * @return JsonResponse
+     * @throws \Throwable
+     */
     public function update(UpdateAsignaturaRequest $request, $id)
     {
 
@@ -180,6 +203,12 @@ class AsignaturasController extends Controller
 
     }
 
+    /**
+     * Eliminar una asignatura
+     * @param $id
+     * @return JsonResponse
+     * @throws \Throwable
+     */
     public function destroy($id)
     {
         $asignatura = Asignatura::find($id);

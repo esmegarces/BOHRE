@@ -18,7 +18,7 @@ class AlumnoFactory extends Factory
     {
         return [
             'nia' => $this->faker->unique()->numerify('A#######'),
-            'situacion' => $this->faker->randomElement(['ACTIVO', 'BAJA_TEMPORAL', 'BAJA_DEFINITIVA', 'EGRESADO']),
+            'situacion' => $this->faker->randomElement(['ACTIVO']),
             'idPersona' => null, // se asigna con ->for()
         ];
     }

@@ -52,7 +52,6 @@ class UpdateUserRequest extends FormRequest
             'numeroExpediente' => 'sometimes|required_if:rol,docente|string|min:1|unique:docente,numeroExpediente,' . $this->route('id'),
             // validaciones alumno
             'nia' => 'sometimes|required_if:rol,alumno|string|max:8|min:8|unique:alumno,nia,' . $this->route('id'),
-            'situacion' => 'sometimes|required_if:rol,alumno|in:activo,baja_temporal,baja_definitiva,egresado',
             'idGrupoSemestre' => 'sometimes|required_if:rol,alumno|numeric|exists:grupo_semestre,id',
             'idGeneracion' => 'sometimes|required_if:rol,alumno|numeric|exists:generacion,id',
             'idEspecialidad' => 'sometimes|required_if:rol,alumno|numeric|exists:especialidad,id',

@@ -75,6 +75,20 @@ class ClaseGeneratorService
             $alumnosGraduados = 0;
             $detalleMigracion = [];
 
+            // ============================================
+            // PASO 0: GRADUAR ALUMNOS DE 6TO AL INICIO DE NUEVO CICLO
+            // ============================================
+            // Si estamos en semestres impares (1,3,5), graduamos a los de 6to
+            // porque ya completaron el ciclo par (2,4,6)
+            if (in_array(1, $semestresActivos)) {
+                $graduacion = $this->graduarAlumnosDeSextoSemestre();
+                $alumnosGraduados = $graduacion['total'];
+
+                if ($graduacion['total'] > 0) {
+                    $detalleMigracion[] = $graduacion;
+                }
+            }
+
             foreach ($semestresActivos as $numeroSemestre) {
                 $semestre = Semestre::where('numero', $numeroSemestre)->first();
                 if (!$semestre) continue;
@@ -146,18 +160,6 @@ class ClaseGeneratorService
                 }
             }
 
-            // ============================================
-            // 4. GRADUAR ALUMNOS DE 6TO SEMESTRE
-            // ============================================
-            if (in_array(6, $semestresActivos)) {
-                $graduacion = $this->graduarAlumnosSextoSemestre();
-                $alumnosGraduados = $graduacion['total'];
-
-                if ($graduacion['total'] > 0) {
-                    $detalleMigracion[] = $graduacion;
-                }
-            }
-
             DB::commit();
 
             return [
@@ -185,9 +187,6 @@ class ClaseGeneratorService
     /**
      * Migra alumnos del semestre anterior a un grupo-semestre específico.
      */
-
-
-    // Buscar el método migrarAlumnosAGrupoSemestre y actualizar la query de alumnos:
     private function migrarAlumnosAGrupoSemestre(int $semestreAnterior, GrupoSemestre $gsDestino, int $anio): array
     {
         // Buscar el grupo-semestre del semestre anterior con el mismo grupo
@@ -213,14 +212,14 @@ class ClaseGeneratorService
             $q->where('grupo_semestre.id', $gsFuente->id);
         })
             ->whereHas('persona', function ($q) {
-                $q->whereNull('deleted_at'); // ← FILTRO PERSONAS ELIMINADAS
+                $q->whereNull('deleted_at');
             })
             ->whereHas('persona.cuentum', function ($q) {
-                $q->whereNull('deleted_at'); // ← FILTRO CUENTAS ELIMINADAS
+                $q->whereNull('deleted_at');
             })
             ->where('situacion', 'ACTIVO')
             ->with(['persona' => function ($q) {
-                $q->whereNull('deleted_at'); // ← CARGAR SOLO PERSONAS NO ELIMINADAS
+                $q->whereNull('deleted_at');
             }, 'especialidads'])
             ->get();
 
@@ -290,21 +289,22 @@ class ClaseGeneratorService
     }
 
     /**
-     * Gradúa alumnos de 6to semestre cambiando su situación a EGRESADO.
+     * Gradúa a los alumnos de 6to semestre al inicio de un nuevo ciclo.
+     * Se ejecuta cuando comienza el ciclo impar (1,3,5).
      */
-    private function graduarAlumnosSextoSemestre(): array
+    private function graduarAlumnosDeSextoSemestre(): array
     {
         $alumnosGraduados = [];
 
-        // Obtener todos los alumnos de 6to semestre activos (EXCLUYENDO ELIMINADOS)
+        // Obtener alumnos ACTIVOS que están en 6to semestre
         $alumnos = Alumno::whereHas('grupo_semestres.semestre', function ($q) {
             $q->where('numero', 6);
         })
             ->whereHas('persona', function ($q) {
-                $q->whereNull('deleted_at'); // ← FILTRO PERSONAS ELIMINADAS
+                $q->whereNull('deleted_at');
             })
             ->whereHas('persona.cuentum', function ($q) {
-                $q->whereNull('deleted_at'); // ← FILTRO CUENTAS ELIMINADAS
+                $q->whereNull('deleted_at');
             })
             ->where('situacion', 'ACTIVO')
             ->with(['persona' => function ($q) {
@@ -320,6 +320,9 @@ class ClaseGeneratorService
 
             // Cambiar situación a EGRESADO
             $alumno->update(['situacion' => 'EGRESADO']);
+            // eliminar su cuenta y persona
+            $alumno->persona->cuentum()->delete();
+            $alumno->persona->delete();
 
             $alumnosGraduados[] = [
                 'nia' => $alumno->nia,

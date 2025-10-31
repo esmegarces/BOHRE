@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Alumno;
 use App\Models\CicloEscolar;
+use App\Models\Clase;
 use App\Models\Cuentum;
 use App\Models\Direccion;
 use App\Models\Docente;
@@ -13,6 +14,7 @@ use App\Models\GrupoSemestre;
 use App\Models\Localidad;
 use App\Models\Persona;
 use App\Models\PlanAsignatura;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -37,7 +39,7 @@ class CuentaFactorySeeder extends Seeder
             }
 
             // Generar 10 cuentas de usuario con sus relaciones completas
-            Cuentum::factory(10)
+            Cuentum::factory(100)
                 ->create()
                 ->each(function ($cuenta) {
                     // Crear una dirección aleatoria vinculada a una localidad existente
@@ -58,59 +60,79 @@ class CuentaFactorySeeder extends Seeder
                             ->for($persona, 'persona')
                             ->create();
 
-                        // Seleccionar aleatoriamente un grupo-semestre existente Ejemplo: 1-A, 2-B, 3-C, etc.
-                        $grupoSemestre = GrupoSemestre::inRandomOrder()->first();
-
-                        // Seleccionar aleatoriamente una generación existente Ejemplo: 2019-2022, 2020-2023, etc.
-                        $generacion = Generacion::inRandomOrder()->first();
-
-                        // Obtener un ciclo escolar que esté dentro del rango de años de la generación
-                        // Esto asegura que el ciclo escolar sea coherente con la generación del alumno
-                        $cicloEscolar = CicloEscolar::where('anioInicio', '>=', $generacion->anioIngreso->year)
-                            ->where('anioFin', '<=', $generacion->anioEgreso->year)
+                        $gsRow = GrupoSemestre::join('grupo as g', 'grupo_semestre.idGrupo', '=', 'g.id')
+                            ->join('semestre as s', 'grupo_semestre.idSemestre', '=', 's.id')
+                            ->whereRaw("
+                                        CURDATE() BETWEEN
+                                            CAST(CONCAT(
+                                                YEAR(CURDATE()),
+                                                '-',
+                                                LPAD(s.mesInicio, 2, '0'),
+                                                '-',
+                                                LPAD(s.diaInicio, 2, '0')
+                                            ) AS DATE)
+                                        AND
+                                            CAST(CONCAT(
+                                                (CASE
+                                                    WHEN s.mesFin < s.mesInicio
+                                                    THEN YEAR(CURDATE()) + 1
+                                                    ELSE YEAR(CURDATE())
+                                                END),
+                                                '-',
+                                                LPAD(s.mesFin, 2, '0'),
+                                                '-',
+                                                LPAD(s.diaFin, 2, '0')
+                                            ) AS DATE)
+                                    ")
                             ->inRandomOrder()
+                            ->select('grupo_semestre.id')
                             ->first();
 
-                        // Registrar la relación alumno-generación en la tabla pivot
-                        // El semestre inicial es el número del semestre del grupo asignado
-                        $generacion->alumnos()->attach($alumno->id, [
-                            'semestreInicial' => $grupoSemestre->semestre->numero,
-                        ]);
+                        if (!$gsRow) {
+                            $this->command->warn('⚠️ No hay grupo_semestre activo en la fecha actual.');
+                            return;
+                        }
 
-                        // Registrar en qué semestre está cursando el alumno en este ciclo escolar
-                        // Esto permite el historial de semestres cursados por ciclo
-                        $cicloEscolar->alumno_ciclos()->create([
-                            'idAlumno' => $alumno->id,
-                            'semestreCursado' => $grupoSemestre->semestre->numero,
-                        ]);
+                        $grupoSemestre = GrupoSemestre::with('semestre', 'grupo')->find($gsRow->id);
+
+                        $numeroSemestre = $grupoSemestre->semestre->numero;
+
+                        // Determinar la generación según el semestre
+                        if (in_array($numeroSemestre, [1, 2])) {
+                            $fechaInicio = '2025-08-01';
+                            $fechaFin = '2028-07-31';
+                        } elseif (in_array($numeroSemestre, [3, 4])) {
+                            $fechaInicio = '2024-08-01';
+                            $fechaFin = '2027-07-31';
+                        } elseif (in_array($numeroSemestre, [5, 6])) {
+                            $fechaInicio = '2023-08-01';
+                            $fechaFin = '2026-07-31';
+                        }
+
+                        if ($fechaInicio && $fechaFin) {
+                            // Buscar esa generación en la BD
+                            $generacion = Generacion::where(['fechaIngreso' => $fechaInicio, 'fechaEgreso' => $fechaFin])->first();
+
+                            if ($generacion) {
+                                // Asociar alumno con generación y semestre inicial
+                                $generacion->alumnos()->syncWithoutDetaching([
+                                    $alumno->id => ['semestreInicial' => $numeroSemestre],
+                                ]);
+                            } else {
+                                \Log::warning("No se encontró la generación {$fechaInicio}-{$fechaFin}.}");
+                            }
+                        }
 
                         // Asignar el alumno al grupo-semestre en la tabla pivot
-                        // Esto vincula al alumno con su grupo específico (ej: 3-A)
-                        $grupoSemestre->alumnos()->attach($alumno->id);
-
-                        // Buscar un docente existente de forma aleatoria para asignar las clases
-                        $docente = Docente::inRandomOrder()->first();
-
-                        // Si no existe ningún docente, crear uno nuevo con todas sus relaciones
-                        if (!$docente) {
-                            $docente = Docente::factory()
-                                ->for(
-                                    Persona::factory()
-                                        ->for(Cuentum::factory())
-                                        ->for(Direccion::factory()),
-                                    'persona'
-                                )
-                                ->create();
-                        }
+                        $grupoSemestre->alumnos()->syncWithoutDetaching([$alumno->id]);
 
                         // Inicializar el arreglo que contendrá todas las asignaturas del alumno
                         $asignaturasTotales = [];
                         $especialidad = null;
 
-
                         $planAsignaturasGenerales = DB::table('plan_asignatura')
                             ->join('asignatura as asi', 'plan_asignatura.idAsignatura', '=', 'asi.id')
-                            ->whereNull('plan_asignatura.idEspecilidad')
+                            ->whereNull('plan_asignatura.idEspecialidad')
                             ->where('plan_asignatura.idSemestre', $grupoSemestre->semestre->id)
                             ->select('asi.*')
                             ->get()
@@ -127,8 +149,9 @@ class CuentaFactorySeeder extends Seeder
                             $especialidad = Especialidad::inRandomOrder()->first();
 
                             // Registrar la especialidad del alumno con el semestre en que inició
-                            $alumno->especialidads()->attach($especialidad->id, [
+                            $alumno->especialidads()->syncWithoutDetaching([$especialidad->id => [
                                 'semestreInicio' => $grupoSemestre->semestre->numero
+                            ]
                             ]);
 
                             // Obtener las asignaturas específicas de la especialidad para el semestre actual del alumno
@@ -146,9 +169,6 @@ class CuentaFactorySeeder extends Seeder
                             $asignaturasTotales = array_merge($asignaturasTotales, $planAsignaturas);
                         }
 
-                        // Generar un salón aleatorio donde se impartirán las clases
-                        $salon = 'Aula ' . rand(1, 20);
-
                         // Recorrer todas las asignaturas (tronco común + especialidad si aplica) y crear un registro de clase por cada una
                         foreach ($asignaturasTotales as $asignatura) {
                             // Obtener el ID de la asignatura (puede venir como array u objeto)
@@ -162,22 +182,30 @@ class CuentaFactorySeeder extends Seeder
 
                             // Si el plan existe y tiene idEspecilidad, guardar ese ID
                             // Si es NULL, significa que es una materia del tronco común
-                            $idEspecialidad = $plan ? $plan->idEspecilidad : null;
+                            $idEspecialidad = $plan ? $plan->idEspecialidad : null;
 
                             // Crear el registro de clase con toda la información:
-                            // - Salón donde se imparte
-                            // - Qué asignatura es
-                            // - En qué grupo-semestre
-                            // - Si pertenece a una especialidad (NULL = tronco común)
-                            $clase = $docente->clases()->firstOrCreate([
-                                'idAsignatura' => $asigId,
-                                'idGrupoSemestre' => $grupoSemestre->id,
-                                'idEspecialidad' => $idEspecialidad,
-                            ], ['salonClase' => $salon]);
+                            $clase = Clase::firstOrCreate(
+                                [
+                                    'idAsignatura' => $asigId,
+                                    'idGrupoSemestre' => $grupoSemestre->id,
+                                    'idEspecialidad' => $idEspecialidad,
+                                    'anio' => Carbon::now()->year, // 👈 incluir aquí también
+                                ]
+                            );
 
-                            $alumno->calificacions()->firstOrCreate([
-                                'idClase' => $clase->id
-                            ]);
+
+                            $alumno->calificacions()->firstOrCreate(
+                                [
+                                    'idClase' => $clase->id,
+                                ],
+                                [
+                                    'momento1' => 0,
+                                    'momento2' => 0,
+                                    'momento3' => 0,
+                                ]
+                            );
+
                         }
 
                     } else {

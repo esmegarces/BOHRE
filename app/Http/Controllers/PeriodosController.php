@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Generacion;
 use App\Models\GrupoSemestre;
+use App\Models\Semestre;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,10 +46,6 @@ class PeriodosController extends Controller
 
     public function getGrupoSemestre()
     {
-        // Obtener todos los grupos semestre con la información requerida
-        $hoy = Carbon::now();
-        $anioActual = $hoy->year;
-
         $gruposSemestres = GrupoSemestre::join('grupo as g', 'grupo_semestre.idGrupo', '=', 'g.id')
             ->join('semestre as s', 'grupo_semestre.idSemestre', '=', 's.id')
             ->whereRaw("
@@ -82,7 +79,7 @@ class PeriodosController extends Controller
             ->orderBy('s.numero', 'asc')
             ->get();
 
-// Verificar si se encontraron grupos semestre
+        // Verificar si se encontraron grupos semestre
         if ($gruposSemestres->isEmpty()) {
             return response()->json([
                 'message' => 'No hay grupos-semestre activos en este momento. Ejecute: POST /api/clases/generar para crear las clases del ciclo actual.',
@@ -93,6 +90,23 @@ class PeriodosController extends Controller
         return response()->json([
             'message' => 'Grupos-Semestre obtenidos exitosamente.',
             'data' => $gruposSemestres
+        ]);
+    }
+
+    public function getSemestres()
+    {
+        $semestres = Semestre::selectRaw("id, numero,  CONCAT(mesInicio, '-', diaInicio, ' / ', mesFin, '-', diaFin) as periodo")->get();
+
+        if ($semestres->isEmpty()) {
+            return response()->json([
+                'message' => 'No hay semestres registrados',
+                'data' => null
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Semestres obtenidos correctamente',
+            'data' => $semestres
         ]);
     }
 }

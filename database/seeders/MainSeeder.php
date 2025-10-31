@@ -26,7 +26,7 @@ class MainSeeder extends Seeder
                 AsignaturasSeeder::class,
                 PlanAsignaturaSeeder::class,
                 GrupoSemestreSeeder::class,
-//                ClaseSeeder::class,
+                //CuentaFactorySeeder::class,
             ]);
         });
     }

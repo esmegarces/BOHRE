@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('nia', 8)->unique('nia');
             //$table->integer('numeroLista')->unique('numeroLista');
-            $table->enum('situacion', ['ACTIVO', 'BAJA_TEMPORAL', 'BAJA_DEFINITIVA', 'EGRESADO']);
+            $table->enum('situacion', ['ACTIVO', 'EGRESADO']);
             $table->unsignedBigInteger('idPersona')->index('idPersona');
             //$table->softDeletes();
             $table->timestamps();

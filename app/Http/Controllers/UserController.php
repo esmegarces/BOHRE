@@ -11,15 +11,12 @@ use App\Models\Direccion;
 use App\Models\Docente;
 use App\Models\Generacion;
 use App\Models\Persona;
-use Carbon\Carbon;
 use Exception;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
-use function PHPUnit\Framework\isEmpty;
 
 class UserController extends Controller
 {
@@ -68,7 +65,7 @@ class UserController extends Controller
                 } else if ($cuenta->rol == 'alumno') {
                     $alumno = Alumno::create([
                         'nia' => $request->nia,
-                        'situacion' => $request->situacion,
+                        'situacion' => 'ACTIVO',
                         'idPersona' => $persona->id,
                     ]);
 
@@ -232,14 +229,13 @@ class UserController extends Controller
 
     /**
      * Obtener la informacion completa especifica de acuerdo al rol y id de un usuario
-     * @param Request $request peticion
      * @return JsonResponse respuesta JSON
      */
-    public function showByRol(Request $request): JsonResponse
+    public function retrieveByRol(string $rol, int $id): JsonResponse
     {
         // extrayendo el rol y id de la peticion
-        $rol = strtolower($request->get('rol'));
-        $idPersona = $request->get('idPersona');
+        $rol = strtolower($rol);
+        $idPersona = $id;
 
         // validando que vengan los datos necesarios en la peticion
         if (!$rol || !$idPersona) {
@@ -468,7 +464,7 @@ class UserController extends Controller
         }
 
         // Actualizar datos básicos del alumno
-        $alumnoData = $request->only(['nia', 'situacion']);
+        $alumnoData = $request->only(['nia']);
         if (!empty($alumnoData)) {
             $alumno->update($alumnoData);
         }
