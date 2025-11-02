@@ -15,11 +15,13 @@ return new class extends Migration
     {
         Schema::create('clase', function (Blueprint $table) {
             $table->id();
-            $table->string('salonClase', 8);
-            $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
-            $table->unsignedBigInteger('idDocente')->index('idDocente');
+            $table->unsignedBigInteger('idAsignatura')->nullable()->index('idAsignatura');
+            $table->unsignedBigInteger('idDocente')->nullable()->index('idDocente');
             $table->unsignedBigInteger('idGrupoSemestre')->index('idGrupoSemestre');
             $table->unsignedBigInteger('idEspecialidad')->nullable()->index('idEspecialidad');
+            $table->year('anio')->nullable(false);
+            $table->unique(['idAsignatura', 'idGrupoSemestre', 'idEspecialidad', 'anio'], 'unique_clase');
+            $table->unique(['idAsignatura', 'idGrupoSemestre', 'anio'], 'unique_clase_2');
         });
     }
 

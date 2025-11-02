@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="reinit database" type="PhpLocalRunConfigurationType" factoryName="PHP Console" path="$PROJECT_DIR$/artisan" scriptParameters="migrate:refresh --seed --seeder=MainSeeder">
+    <CommandLine>
+      <PhpTestInterpreterSettings>
+        <option name="interpreterName" value="$PROJECT_DIR$/../../../../../../../xampp/php/php.exe" />
+      </PhpTestInterpreterSettings>
+    </CommandLine>
+    <method v="2" />
+  </configuration>
+</component>

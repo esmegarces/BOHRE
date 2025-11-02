@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('idAlumno')->index('idAlumno');
             $table->unsignedBigInteger('idEspecialidad')->index('idEspecialidad');
             $table->smallInteger('semestreInicio');
+            $table->unique('idAlumno', 'unique_alumno_especialidad');
         });
     }
 

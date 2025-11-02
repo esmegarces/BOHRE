@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('idAsignatura')->index('idAsignatura');
             $table->unsignedBigInteger('idSemestre')->index('idSemestre');
-            $table->unsignedBigInteger('idEspecilidad')->nullable()->index('idEspecilidad');
+            $table->unsignedBigInteger('idEspecialidad')->nullable()->index('idEspecialidad');
         });
     }
 

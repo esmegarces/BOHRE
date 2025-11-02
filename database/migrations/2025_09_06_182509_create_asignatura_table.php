@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('asignatura', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 50)->unique('nombre');
+            $table->string('nombre', 150)->unique('nombre');
             $table->enum('tipo', ['COMUN', 'ESPECIALIDAD'])->index('idx_asignatura_tipo');
         });
     }

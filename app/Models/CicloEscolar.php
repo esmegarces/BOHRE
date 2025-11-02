@@ -12,12 +12,11 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class CicloEscolar
- * 
+ *
  * @property int $id
  * @property Carbon $anioInicio
  * @property Carbon $anioFin
- * @property bool $activo
- * 
+ *
  * @property Collection|AlumnoCiclo[] $alumno_ciclos
  *
  * @package App\Models
@@ -28,15 +27,13 @@ class CicloEscolar extends Model
 	public $timestamps = false;
 
 	protected $casts = [
-		'anioInicio' => 'datetime',
-		'anioFin' => 'datetime',
-		'activo' => 'bool'
+		'anioInicio' => 'integer',
+		'anioFin' => 'integer',
 	];
 
 	protected $fillable = [
 		'anioInicio',
-		'anioFin',
-		'activo'
+		'anioFin'
 	];
 
 	public function alumno_ciclos()

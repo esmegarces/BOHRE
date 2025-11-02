@@ -15,9 +15,9 @@ return new class extends Migration
     {
         Schema::create('calificacion', function (Blueprint $table) {
             $table->id();
-            $table->smallInteger('momento1');
-            $table->smallInteger('momento2');
-            $table->smallInteger('momento3');
+            $table->smallInteger('momento1')->default(0);
+            $table->smallInteger('momento2')->default(0);
+            $table->smallInteger('momento3')->default(0);
             $table->unsignedBigInteger('idClase')->index('idClase');
             $table->unsignedBigInteger('idAlumno')->index('idAlumno');
         });

@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Semestre
- * 
+ *
  * @property int $id
  * @property int $numero
  * @property string $periodo
- * 
+ *
  * @property Collection|Grupo[] $grupos
  * @property Collection|PlanAsignatura[] $plan_asignaturas
  *
@@ -23,26 +23,29 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Semestre extends Model
 {
-	protected $table = 'semestre';
-	public $timestamps = false;
+    protected $table = 'semestre';
+    public $timestamps = false;
 
-	protected $casts = [
-		'numero' => 'int'
-	];
+    protected $casts = [
+        'numero' => 'int'
+    ];
 
-	protected $fillable = [
-		'numero',
-		'periodo'
-	];
+    protected $fillable = [
+        'numero',
+        'mesInicio',
+        'diaInicio',
+        'mesFin',
+        'diaFin',
+    ];
 
-	public function grupos()
-	{
-		return $this->belongsToMany(Grupo::class, 'grupo_semestre', 'idSemestre', 'idGrupo')
-					->withPivot('id');
-	}
+    public function grupos()
+    {
+        return $this->belongsToMany(Grupo::class, 'grupo_semestre', 'idSemestre', 'idGrupo')
+            ->withPivot('id');
+    }
 
-	public function plan_asignaturas()
-	{
-		return $this->hasMany(PlanAsignatura::class, 'idSemestre');
-	}
+    public function plan_asignaturas()
+    {
+        return $this->hasMany(PlanAsignatura::class, 'idSemestre');
+    }
 }

@@ -12,12 +12,11 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Generacion
- * 
+ *
  * @property int $id
  * @property Carbon $anioIngreso
  * @property Carbon $anioEgreso
- * @property bool $activa
- * 
+ *
  * @property Collection|Alumno[] $alumnos
  *
  * @package App\Models
@@ -28,15 +27,13 @@ class Generacion extends Model
 	public $timestamps = false;
 
 	protected $casts = [
-		'anioIngreso' => 'datetime',
-		'anioEgreso' => 'datetime',
-		'activa' => 'bool'
+		'fechaIngreso' => 'date',
+		'fechaEgreso' => 'date'
 	];
 
 	protected $fillable = [
-		'anioIngreso',
-		'anioEgreso',
-		'activa'
+		'fechaIngreso',
+		'fechaEgreso'
 	];
 
 	public function alumnos()

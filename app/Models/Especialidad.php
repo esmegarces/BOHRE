@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Especialidad
- * 
+ *
  * @property int $id
  * @property string $nombre
- * 
+ *
  * @property Collection|Alumno[] $alumnos
  * @property Collection|Clase[] $clases
  * @property Collection|PlanAsignatura[] $plan_asignaturas
@@ -43,6 +43,6 @@ class Especialidad extends Model
 
 	public function plan_asignaturas()
 	{
-		return $this->hasMany(PlanAsignatura::class, 'idEspecilidad');
+		return $this->hasMany(PlanAsignatura::class, 'idEspecialidad');
 	}
 }

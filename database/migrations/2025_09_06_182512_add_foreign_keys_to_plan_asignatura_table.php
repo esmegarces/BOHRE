@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::table('plan_asignatura', function (Blueprint $table) {
             $table->foreign(['idAsignatura'], 'plan_asignatura_ibfk_1')->references(['id'])->on('asignatura')->onUpdate('NO ACTION')->onDelete('NO ACTION');
             $table->foreign(['idSemestre'], 'plan_asignatura_ibfk_2')->references(['id'])->on('semestre')->onUpdate('NO ACTION')->onDelete('NO ACTION');
-            $table->foreign(['idEspecilidad'], 'plan_asignatura_ibfk_3')->references(['id'])->on('especialidad')->onUpdate('NO ACTION')->onDelete('NO ACTION');
+            $table->foreign(['idEspecialidad'], 'plan_asignatura_ibfk_3')->references(['id'])->on('especialidad')->onUpdate('NO ACTION')->onDelete('NO ACTION');
         });
     }
 

@@ -14,8 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('grupo_semestre', function (Blueprint $table) {
-            $table->foreign(['idGrupo'], 'grupo_semestre_ibfk_1')->references(['id'])->on('grupo')->onUpdate('NO ACTION')->onDelete('NO ACTION');
-            $table->foreign(['idSemestre'], 'grupo_semestre_ibfk_2')->references(['id'])->on('semestre')->onUpdate('NO ACTION')->onDelete('NO ACTION');
+            $table->foreign(['idGrupo'], 'grupo_semestre_ibfk_1')->references(['id'])->on('grupo')->onUpdate('CASCADE')->onDelete('CASCADE');
+            $table->foreign(['idSemestre'], 'grupo_semestre_ibfk_2')->references(['id'])->on('semestre')->onUpdate('CASCADE')->onDelete('CASCADE');
         });
     }
 

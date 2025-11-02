@@ -2,52 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Alumno;
+use App\Models\Clase;
 use App\Models\Cuentum;
 use App\Models\Direccion;
 use App\Models\Docente;
+use App\Models\Especialidad;
+use App\Models\Generacion;
 use App\Models\Persona;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\UsuariosExport;
 use Throwable;
 
 class UserController extends Controller
 {
 
     /**
-     * @param UserRequest $request
      * @return JsonResponse respuesta JSON
      * @throws Throwable en caso de error en la transaccion
      */
-    public function store(UserRequest $request)
+    public function store(StoreUserRequest $request)
     {
         try {
             $usuario = DB::transaction(function () use ($request) {
-                // almacenando el registro de direccion perteneciente al usuario
+                // Crear dirección, cuenta y persona (igual que antes)
                 $direccion = Direccion::create([
                     'numeroCasa' => $request->numeroCasa,
-                    'calle' => $request->calle,
+                    'calle' => strtoupper($request->calle),
                     'idLocalidad' => $request->idLocalidad
                 ]);
 
-                // almacenando el registro de cuenta para el usuario
                 $cuenta = Cuentum::create([
-                    'correo' => $request->correo,
+                    'correo' => strtoupper($request->correo),
                     'contrasena' => Hash::make($request->contrasena),
                     'rol' => $request->rol,
-
                 ]);
 
-                // almacenando el registro de persona para el usuario
                 $persona = Persona::create([
-                    'nombre' => $request->nombre,
-                    'apellidoPaterno' => $request->apellidoPaterno,
-                    'apellidoMaterno' => $request->apellidoMaterno,
-                    'curp' => $request->curp,
+                    'nombre' => strtoupper($request->nombre),
+                    'apellidoPaterno' => strtoupper($request->apellidoPaterno),
+                    'apellidoMaterno' => strtoupper($request->apellidoMaterno),
+                    'curp' => strtoupper($request->curp),
                     'telefono' => $request->telefono,
                     'sexo' => $request->sexo,
                     'fechaNacimiento' => $request->fechaNacimiento,
@@ -56,26 +58,66 @@ class UserController extends Controller
                     'idCuenta' => $cuenta->id,
                 ]);
 
-
-                // evaluando el rol del usuario para determinar en que tabla se debera guardar su informacion
                 if ($cuenta->rol == 'docente') {
-                    // si el rol es docente, se guarda en su respectiva tabla
                     Docente::create([
                         'cedulaProfesional' => $request->cedulaProfesional,
                         'numeroExpediente' => $request->numeroExpediente,
                         'idPersona' => $persona->id,
                     ]);
 
-                    //si no, en caso de alumno, se guarda en la tabla correspondiente
                 } else if ($cuenta->rol == 'alumno') {
-                    Alumno::create([
+                    $alumno = Alumno::create([
                         'nia' => $request->nia,
-                        'situacion' => $request->situacion,
+                        'situacion' => 'ACTIVO',
                         'idPersona' => $persona->id,
                     ]);
+
+                    // Asignar al grupo-semestre
+                    $alumno->grupo_semestres()->attach($request->idGrupoSemestre);
+
+                    // Recuperar semestre
+                    $semestre = $alumno->grupo_semestres()
+                        ->where('grupo_semestre.id', $request->idGrupoSemestre)
+                        ->first()
+                        ?->semestre;
+
+                    // Asociar generación
+                    $generacion = Generacion::find($request->idGeneracion);
+                    $alumno->generacions()->attach($generacion->id, [
+                        'semestreInicial' => $semestre->numero
+                    ]);
+
+                    // Si tiene especialidad, registrarla
+                    if ($request->idEspecialidad) {
+                        $alumno->especialidads()->attach($request->idEspecialidad, [
+                            'semestreInicio' => $semestre->numero
+                        ]);
+                    }
+
+                    // IMPORTANTE: Obtener las clases YA EXISTENTES del año actual
+                    $anioActual = now()->year;
+
+                    $clases = Clase::where('idGrupoSemestre', $request->idGrupoSemestre)
+                        ->where('anio', $anioActual)
+                        ->where(function ($query) use ($request) {
+                            $query->whereNull('idEspecialidad') // Tronco común
+                            ->orWhere('idEspecialidad', $request->idEspecialidad); // Su especialidad
+                        })
+                        ->get();
+
+                    // Crear calificaciones para cada clase
+                    foreach ($clases as $clase) {
+                        $alumno->calificacions()->firstOrCreate([
+                            'idAlumno' => $alumno->id,
+                            'idClase' => $clase->id,
+                        ], [
+                            'momento1' => 0,
+                            'momento2' => 0,
+                            'momento3' => 0,
+                        ]);
+                    }
                 }
 
-                // obteniendo el registro con informacion general del usuario, sin importar el rol que tenga
                 return Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
                     ->select(
                         'persona.id',
@@ -87,10 +129,10 @@ class UserController extends Controller
                         'persona.nss',
                         'c.rol'
                     )
-                    ->orderByDesc('persona.id')->first();
+                    ->where('persona.id', $persona->id)
+                    ->first();
             });
 
-            // mensaje de exito
             return response()->json([
                 'message' => 'Usuario creado con éxito',
                 'data' => $usuario
@@ -145,16 +187,58 @@ class UserController extends Controller
 
     }
 
+    public function showDeletes(Request $request)
+    {
+        // extrayendo el parametro rol de la peticion
+        $rol = strtolower($request->get('rol'));
+
+        // validando que el rol sea uno de los permitidos
+        if ($rol && !in_array($rol, ['alumno', 'docente', 'admin'])) {
+            return response()->json(['message' => 'El rol proporcionado no es válido', 'data' => null], 406);
+        }
+
+        // obteniendo los usuarios eliminados de acuerdo al rol
+        $personas = Persona::withTrashed()
+            ->join('cuenta as c', function ($join) {
+                $join->on('persona.idCuenta', '=', 'c.id');
+            })
+            ->select(
+                'persona.id',
+                'persona.nombre',
+                'persona.apellidoPaterno',
+                'persona.apellidoMaterno',
+                'persona.curp',
+                DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+                'persona.nss',
+                'c.rol'
+            )
+            ->where(function ($query) {
+                $query->whereNotNull('persona.deleted_at')
+                    ->orWhereNotNull('c.deleted_at');
+            })
+            ->when($rol, function ($query, $rol) {
+                return $query->where('c.rol', $rol);
+            })
+            ->paginate(15);
+
+        // evaluar el caso en que no existan registros en la db
+        if ($personas->isEmpty()) {
+            return response()->json(['message' => 'No hay usuarios eliminados', 'data' => null], 404);
+        } else {
+            return response()->json(['message' => 'Usuarios recuperados con éxito', 'data' => $personas]);
+        }
+
+    }
+
     /**
      * Obtener la informacion completa especifica de acuerdo al rol y id de un usuario
-     * @param Request $request peticion
      * @return JsonResponse respuesta JSON
      */
-    public function showByRol(Request $request): JsonResponse
+    public function retrieveByRol(string $rol, int $id): JsonResponse
     {
         // extrayendo el rol y id de la peticion
-        $rol = strtolower($request->get('rol'));
-        $idPersona = $request->get('idPersona');
+        $rol = strtolower($rol);
+        $idPersona = $id;
 
         // validando que vengan los datos necesarios en la peticion
         if (!$rol || !$idPersona) {
@@ -189,7 +273,9 @@ class UserController extends Controller
             'persona.nss',
             'c.correo',
             'c.rol',
+            'm.id as idMunicipio',
             'm.nombre as municipio',
+            'l.id as idLocalidad',
             'l.nombre as localidad',
             'l.codigoPostal',
             'd.numeroCasa',
@@ -200,8 +286,39 @@ class UserController extends Controller
         switch ($rol) {
             case 'alumno':
                 $query->join('alumno as a', 'persona.id', '=', 'a.idPersona');
+                $query->join('alumno_grupo_semestre as ags', 'a.id', '=', 'ags.idAlumno');
+                $query->join('grupo_semestre as gs', 'ags.idGrupoSemestre', '=', 'gs.id');
+                $query->join('semestre as s', 'gs.idSemestre', '=', 's.id');
+                $query->join('grupo as g', 'g.id', '=', 'gs.idGrupo');
+                $query->join('alumno_generacion as ag', 'ag.idAlumno', '=', 'a.id');
+                $query->join('generacion as gen', 'gen.id', '=', 'ag.idGeneracion');
+                $query->leftJoin('alumno_especialidad as aesp', 'aesp.idAlumno', '=', 'a.id');
+                $query->leftJoin('especialidad as esp', 'esp.id', '=', 'aesp.idEspecialidad');
+
+                // Filtrar para traer solo el semestre con el número máximo (más grande) del alumno
+                // Filtrar para traer solo el semestre con el número máximo (más grande) del alumno
+                $query->whereRaw(
+                    's.numero = (
+                SELECT MAX(se.numero)
+                FROM semestre se
+                JOIN grupo_semestre gs2 ON se.id = gs2.idSemestre
+                JOIN alumno_grupo_semestre ags2 ON gs2.id = ags2.idGrupoSemestre
+                JOIN alumno a2 ON ags2.idAlumno = a2.id
+                WHERE a2.idPersona = ?
+            )',
+                    [$idPersona]
+                );
+
                 $select[] = 'a.nia';
                 $select[] = 'a.situacion';
+                $select[] = 'gs.id as idGrupoSemestre';
+                $select[] = 's.numero as numeroSemestre';
+                //$select[] = 's.periodo as periodoSemestre';
+                $select[] = 'gen.id as idGeneracion';
+                $select[] = 'gen.fechaIngreso as fechaIngresoGeneracion';
+                $select[] = 'gen.fechaEgreso as fechaEgresoGeneracion';
+                $select[] = 'esp.id as idEspecialidad';
+                $select[] = 'esp.nombre as especialidadNombre';
                 break;
 
             case 'docente':
@@ -225,192 +342,337 @@ class UserController extends Controller
     /**
      * Actualizar la informacion de un usuario
      *
-     * @param UserRequest $request validacion de datos de usuario
+     * @param UpdateUserRequest $request validacion de datos de usuario
      * @param int $id del usuario a actualizar (persona)
      * @return JsonResponse
      * @throws Throwable en caso de error en la transaccion
      */
-    public function update(UserRequest $request, int $id): JsonResponse
+    public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
-        // buscando el usuario por su id (persona)
         $persona = Persona::find($id);
 
-        // evaluando si no se encuentra el usuario en la db
         if (!$persona) {
             return response()->json(['message' => 'Usuario no encontrado', 'data' => null], 404);
         }
 
         try {
-            $persona = DB::transaction(function () use ($request, $persona) {
+            $person = DB::transaction(function () use ($request, $persona) {
 
-                // actualizar dirección
+                // ============================================
+                // 1. ACTUALIZAR DIRECCIÓN
+                // ============================================
                 $direccion = Direccion::find($persona->idDireccion);
-
-                // obtiene en un array solo los campos que pasaron la validacion de la request
                 $direccionData = $request->only(['numeroCasa', 'calle', 'idLocalidad']);
 
-                // si no esta vacio el array, actualiza
+                if (isset($direccionData['calle'])) {
+                    $direccionData['calle'] = strtoupper($direccionData['calle']);
+                }
+
                 if (!empty($direccionData)) {
                     $direccion->update($direccionData);
                 }
 
-                // actualizar cuenta
-                $cuenta = Cuentum::find($persona->idCuenta);
+                // ============================================
+                // 2. ACTUALIZAR CUENTA
+                // ============================================
+                $cuenta = $persona->cuentum;
                 $cuentaData = [];
 
                 if ($request->has('correo')) {
-                    $cuentaData['correo'] = $request->correo;
+                    $cuentaData['correo'] = strtoupper($request->correo);
                 }
                 if ($request->has('contrasena')) {
                     $cuentaData['contrasena'] = Hash::make($request->contrasena);
                 }
 
-                if ($request->has('rol')) {
-                    // obteniendo los roles en minusculas para evitar problemas de comparacion
-                    $rolCuenta = strtolower($cuenta->rol);
-                    $rolRecibido = strtolower($request->rol);
-
-                    // SI EL ROL ACTUAL ES DISTINTO AL RECIBIDO, eliminar registros antiguos y crear nuevos según el nuevo rol
-                    if ($rolCuenta !== $rolRecibido) {
-
-                        // agregando el nuevo rol al array de actualizacion
-                        $cuentaData['rol'] = $rolRecibido;
-
-
-                        // evalua el rol anterior para eliminar su registro correspondiente,
-                        // forzando la eliminacion para evitar problemas de integridad referencial
-                        switch ($rolCuenta) {
-                            case 'docente':
-                                // elimina el docente si el rol anterior era docente
-                                Docente::where('idPersona', $persona->id)->forceDelete();
-                                break;
-                            case 'alumno':
-                                // elimina el alumno si el rol anterior era alumno
-                                Alumno::where('idPersona', $persona->id)->forceDelete();
-                                break;
-                        }
-
-                        // evalua el nuevo rol para crear su registro correspondiente
-                        switch ($rolRecibido) {
-                            case 'docente':
-                                Docente::create([
-                                    'cedulaProfesional' => $request->cedulaProfesional,
-                                    'numeroExpediente' => $request->numeroExpediente,
-                                    'idPersona' => $persona->id,
-                                ]);
-                                break;
-                            case 'alumno':
-                                Alumno::create([
-                                    'nia' => $request->nia,
-                                    'situacion' => $request->situacion,
-                                    'idPersona' => $persona->id,
-                                ]);
-                                break;
-                        }
-                        // el admin no fue necesario evaluarlo porque no existe una tabla dependiente para el rol admin
-                    }
-                }
-
-                // actualiza la cuenta si el array no esta vacio
                 if (!empty($cuentaData)) {
                     $cuenta->update($cuentaData);
                 }
 
-                // actualizar persona, de la request, en un array solo obtiene los campos que pasaron la validacion
+                // ============================================
+                // 3. ACTUALIZAR PERSONA
+                // ============================================
                 $personaData = $request->only([
-                    'nombre',
-                    'apellidoPaterno',
-                    'apellidoMaterno',
-                    'curp',
-                    'telefono',
-                    'sexo',
-                    'fechaNacimiento',
-                    'nss'
+                    'nombre', 'apellidoPaterno', 'apellidoMaterno',
+                    'curp', 'telefono', 'sexo', 'fechaNacimiento', 'nss'
                 ]);
 
-                // si el array no esta vacio, actualiza
+                $upperKeys = ['nombre', 'apellidoPaterno', 'apellidoMaterno', 'curp'];
+                foreach ($upperKeys as $key) {
+                    if (isset($personaData[$key])) {
+                        $personaData[$key] = strtoupper($personaData[$key]);
+                    }
+                }
+
                 if (!empty($personaData)) {
                     $persona->update($personaData);
                 }
 
-                // actualizar datos específicos por rol (en caso de que no haya cambiado el rol)
-                if ($cuenta->rol === 'docente') {
-                    $docente = Docente::where('idPersona', $persona->id)->first();
-                    if ($docente) {
-                        $docenteData = $request->only(['cedulaProfesional', 'numeroExpediente']);
-                        if (!empty($docenteData)) {
-                            $docente->update($docenteData);
-                        }
-                    }
-                } elseif ($cuenta->rol === 'alumno') {
-                    $alumno = Alumno::where('idPersona', $persona->id)->first();
-                    if ($alumno) {
-                        $alumnoData = $request->only(['nia', 'situacion']);
-                        if (!empty($alumnoData)) {
-                            $alumno->update($alumnoData);
-                        }
-                    }
+                $rolCuenta = strtolower($cuenta->rol);
+
+                // ============================================
+                // 4. ACTUALIZAR POR ROL
+                // ============================================
+                if ($rolCuenta === 'docente') {
+                    $this->actualizarDocente($request, $persona);
+
+                } elseif ($rolCuenta === 'alumno') {
+                    $this->actualizarAlumno($request, $persona);
                 }
 
-                // volver a consultar al usuario con la estructura correcta
-                $query = DB::table('persona')
-                    ->join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
-                    ->join('direccion as d', 'persona.idDireccion', '=', 'd.id')
-                    ->join('localidad as l', 'd.idLocalidad', '=', 'l.id')
-                    ->join('municipio as m', 'l.idMunicipio', '=', 'm.id')
-                    ->where('persona.id', $persona->id)
-                    ->where('c.rol', $cuenta->rol);
-
-                // Campos base comunes a todos los roles
-                $select = [
-                    'persona.id',
-                    'persona.nombre',
-                    'persona.apellidoPaterno',
-                    'persona.apellidoMaterno',
-                    'persona.curp',
-                    'persona.telefono',
-                    DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
-                    'persona.fechaNacimiento',
-                    'persona.nss',
-                    'c.correo',
-                    'c.rol',
-                    'm.nombre as municipio',
-                    'l.nombre as localidad',
-                    'l.codigoPostal',
-                    'd.numeroCasa',
-                    'd.calle',
-                ];
-
-                // Campos específicos según el rol
-                switch ($cuenta->rol) {
-                    case 'alumno':
-                        $query->join('alumno as a', 'persona.id', '=', 'a.idPersona');
-                        $select[] = 'a.nia';
-                        $select[] = 'a.situacion';
-                        break;
-
-                    case 'docente':
-                        $query->join('docente as dc', 'persona.id', '=', 'dc.idPersona');
-                        $select[] = 'dc.cedulaProfesional';
-                        $select[] = 'dc.numeroExpediente';
-                        break;
-                }
-
-                return $query->select($select)->first();
+                // ============================================
+                // 5. RETORNAR DATOS ACTUALIZADOS
+                // ============================================
+                return $this->obtenerDatosUsuario($persona->id, $rolCuenta);
             });
 
             return response()->json([
                 'message' => 'Usuario actualizado con éxito',
-                'data' => $persona
+                'data' => $person
             ]);
 
-        } catch
-        (Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al actualizar el usuario',
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+// ============================================
+// MÉTODOS AUXILIARES
+// ============================================
+
+    private function actualizarDocente($request, $persona)
+    {
+        $docente = Docente::where('idPersona', $persona->id)->first();
+
+        if (!$docente) {
+            return;
+        }
+
+        $docenteData = $request->only(['cedulaProfesional', 'numeroExpediente']);
+
+        if (!empty($docenteData)) {
+            $docente->update($docenteData);
+        }
+    }
+
+    private function actualizarAlumno($request, $persona)
+    {
+        $alumno = Alumno::where('idPersona', $persona->id)->first();
+
+        if (!$alumno) {
+            return;
+        }
+
+        // Actualizar datos básicos del alumno
+        $alumnoData = $request->only(['nia']);
+        if (!empty($alumnoData)) {
+            $alumno->update($alumnoData);
+        }
+
+        // Si cambia de grupo-semestre
+        if ($request->has('idGrupoSemestre')) {
+            $this->cambiarGrupoSemestre($alumno, $request);
+        }
+
+        // Si cambia de especialidad (solo si está en 3er semestre o superior)
+        if ($request->has('idEspecialidad')) {
+            $this->cambiarEspecialidad($alumno, $request);
+        }
+    }
+
+    private function cambiarGrupoSemestre($alumno, $request)
+    {
+        $grupoSemestreAnterior = $alumno->grupo_semestres()->first();
+        $nuevoGrupoSemestreId = $request->idGrupoSemestre;
+
+        // Si no cambió, no hacer nada
+        if ($grupoSemestreAnterior && $grupoSemestreAnterior->id == $nuevoGrupoSemestreId) {
+            return;
+        }
+
+        // Actualizar relación grupo-semestre
+        $alumno->grupo_semestres()->sync([$nuevoGrupoSemestreId]);
+
+        // Obtener el nuevo semestre
+        $nuevoSemestre = $alumno->grupo_semestres()->first()?->semestre;
+
+        if (!$nuevoSemestre) {
+            throw new Exception('No se pudo obtener el semestre del nuevo grupo');
+        }
+
+        // Obtener especialidad actual del alumno
+        $especialidadAlumno = $alumno->especialidads()->first();
+        $anioActual = now()->year;
+
+        // Obtener las clases YA EXISTENTES para este grupo-semestre
+        $clasesDisponibles = Clase::where('idGrupoSemestre', $nuevoGrupoSemestreId)
+            ->where('anio', $anioActual)
+            ->where(function ($query) use ($especialidadAlumno) {
+                $query->whereNull('idEspecialidad'); // Tronco común
+
+                if ($especialidadAlumno) {
+                    $query->orWhere('idEspecialidad', $especialidadAlumno->id);
+                }
+            })
+            ->get();
+
+        if ($clasesDisponibles->isEmpty()) {
+            throw new Exception("No existen clases creadas para este grupo-semestre en el año {$anioActual}. Ejecute: php artisan clases:generar {$anioActual}");
+        }
+
+        // Crear calificaciones para las nuevas clases (solo si no existen)
+        foreach ($clasesDisponibles as $clase) {
+            $alumno->calificacions()->firstOrCreate([
+                'idAlumno' => $alumno->id,
+                'idClase' => $clase->id, // IMPORTANTE: usa idClase
+            ], [
+                'momento1' => 0,
+                'momento2' => 0,
+                'momento3' => 0,
+            ]);
+        }
+    }
+
+    private function cambiarEspecialidad($alumno, $request)
+    {
+        $semestreActual = $alumno->grupo_semestres()->first()?->semestre;
+
+        // Solo se puede tener especialidad desde 3er semestre
+        if (!$semestreActual || $semestreActual->numero < 3) {
+            return;
+        }
+
+        $especialidadAnterior = $alumno->especialidads()->first();
+        $nuevaEspecialidadId = $request->idEspecialidad;
+
+        // Si no cambió, no hacer nada
+        if ($especialidadAnterior && $especialidadAnterior->id == $nuevaEspecialidadId) {
+            return;
+        }
+
+        // Actualizar especialidad
+        $alumno->especialidads()->sync([
+            $nuevaEspecialidadId => ['semestreInicio' => $semestreActual->numero]
+        ]);
+
+        // Obtener grupo-semestre actual
+        $grupoSemestreId = $alumno->grupo_semestres()->first()->id;
+        $anioActual = now()->year;
+
+        // Obtener clases de la nueva especialidad
+        $clasesEspecialidad = Clase::where('idGrupoSemestre', $grupoSemestreId)
+            ->where('anio', $anioActual)
+            ->where('idEspecialidad', $nuevaEspecialidadId)
+            ->get();
+
+        if ($clasesEspecialidad->isEmpty()) {
+            throw new Exception("No existen clases de esta especialidad para este grupo-semestre en el año {$anioActual}");
+        }
+
+        // Crear calificaciones para las clases de especialidad
+        foreach ($clasesEspecialidad as $clase) {
+            $alumno->calificacions()->firstOrCreate([
+                'idAlumno' => $alumno->id,
+                'idClase' => $clase->id,
+            ], [
+                'momento1' => 0,
+                'momento2' => 0,
+                'momento3' => 0,
+            ]);
+        }
+
+        // OPCIONAL: Eliminar calificaciones de la especialidad anterior si existía
+        if ($especialidadAnterior) {
+            $clasesAnteriores = Clase::where('idGrupoSemestre', $grupoSemestreId)
+                ->where('anio', $anioActual)
+                ->where('idEspecialidad', $especialidadAnterior->id)
+                ->pluck('id');
+
+            // Eliminar calificaciones de la especialidad anterior
+            $alumno->calificacions()
+                ->whereIn('idClase', $clasesAnteriores)
+                ->delete();
+        }
+    }
+
+    private function obtenerDatosUsuario($personaId, $rol)
+    {
+        $query = DB::table('persona')
+            ->join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
+            ->join('direccion as d', 'persona.idDireccion', '=', 'd.id')
+            ->join('localidad as l', 'd.idLocalidad', '=', 'l.id')
+            ->join('municipio as m', 'l.idMunicipio', '=', 'm.id')
+            ->where('persona.id', $personaId)
+            ->where('c.rol', $rol);
+
+        $select = [
+            'persona.id',
+            'persona.nombre',
+            'persona.apellidoPaterno',
+            'persona.apellidoMaterno',
+            'persona.curp',
+            'persona.telefono',
+            DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+            'persona.fechaNacimiento',
+            'persona.nss',
+            'c.correo',
+            'c.rol',
+            'm.id as idMunicipio',
+            'm.nombre as municipio',
+            'l.id as idLocalidad',
+            'l.nombre as localidad',
+            'l.codigoPostal',
+            'd.numeroCasa',
+            'd.calle',
+        ];
+
+        switch ($rol) {
+            case 'alumno':
+                $query->join('alumno as a', 'persona.id', '=', 'a.idPersona')
+                    ->join('alumno_grupo_semestre as ags', 'a.id', '=', 'ags.idAlumno')
+                    ->join('grupo_semestre as gs', 'ags.idGrupoSemestre', '=', 'gs.id')
+                    ->join('semestre as s', 'gs.idSemestre', '=', 's.id')
+                    ->join('grupo as g', 'g.id', '=', 'gs.idGrupo')
+                    ->join('alumno_generacion as ag', 'ag.idAlumno', '=', 'a.id')
+                    ->join('generacion as gen', 'gen.id', '=', 'ag.idGeneracion')
+                    ->leftJoin('alumno_especialidad as aesp', 'aesp.idAlumno', '=', 'a.id')
+                    ->leftJoin('especialidad as esp', 'esp.id', '=', 'aesp.idEspecialidad');
+
+                $query->whereRaw('s.numero = (
+                SELECT MAX(se.numero)
+                FROM semestre se
+                JOIN grupo_semestre gs2 ON se.id = gs2.idSemestre
+                JOIN alumno_grupo_semestre ags2 ON gs2.id = ags2.idGrupoSemestre
+                JOIN alumno a2 ON ags2.idAlumno = a2.id
+                WHERE a2.idPersona = ?
+            )', [$personaId]);
+
+                $select = array_merge($select, [
+                    'a.nia',
+                    'a.situacion',
+                    'gs.id as idGrupoSemestre',
+                    's.numero as numeroSemestre',
+                    'gen.id as idGeneracion',
+                    'gen.fechaIngreso as fechaIngresoGeneracion',
+                    'gen.fechaEgreso as fechaEgresoGeneracion',
+                    'esp.id as idEspecialidad',
+                    'esp.nombre as especialidadNombre',
+                ]);
+                break;
+
+            case 'docente':
+                $query->join('docente as dc', 'persona.id', '=', 'dc.idPersona');
+                $select = array_merge($select, [
+                    'dc.cedulaProfesional',
+                    'dc.numeroExpediente',
+                ]);
+                break;
+        }
+
+        return $query->select($select)->first();
     }
 
     /**
@@ -456,5 +718,251 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Eliminar un usuario definitivamente (soft delete)
+     *
+     * @param int $id de usuario a eliminar (persona)
+     * @return JsonResponse
+     * @throws Throwable en caso de error en la transaccion
+     */
+    public function destroyPermanently(int $id)
+    {
+        // Buscar la persona incluyendo las eliminadas con soft delete
+        $persona = Persona::withTrashed()->find($id);
+
+        if (!$persona) {
+            return response()->json(['message' => 'Usuario no encontrado', 'data' => null], 404);
+        }
+
+        try {
+            // Obtener la cuenta del usuario (incluyendo eliminadas)
+            $cuenta = Cuentum::withTrashed()->find($persona->idCuenta);
+
+            if (!$cuenta) {
+                return response()->json(['message' => 'Cuenta no encontrada', 'data' => null], 404);
+            }
+
+            // Obtener el ID de la dirección antes de eliminar
+            $idDireccion = $persona->idDireccion;
+
+            // Transacción para eliminar registros
+            DB::transaction(function () use ($persona, $cuenta, $idDireccion) {
+
+                // 1. Eliminar dependencias que NO tienen CASCADE en sus foreign keys
+                if ($cuenta->rol === 'alumno') {
+                    // Obtener IDs de alumnos (incluyendo soft deleted si alumno usa SoftDeletes)
+                    $alumnoIds = DB::table('alumno')
+                        ->where('idPersona', $persona->id)
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($alumnoIds)) {
+                        // Eliminar tablas pivot y relacionadas que NO tienen CASCADE
+                        DB::table('alumno_especialidad')->whereIn('idAlumno', $alumnoIds)->delete();
+                        DB::table('alumno_generacion')->whereIn('idAlumno', $alumnoIds)->delete();
+                        DB::table('alumno_grupo_semestre')->whereIn('idAlumno', $alumnoIds)->delete();
+
+                        // Otras tablas relacionadas
+                        DB::table('calificacion')->whereIn('idAlumno', $alumnoIds)->delete();
+                    }
+
+                } elseif ($cuenta->rol === 'docente') {
+                    // Obtener IDs de docentes
+                    $docenteIds = DB::table('docente')
+                        ->where('idPersona', $persona->id)
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($docenteIds)) {
+                        // Eliminar clases asociadas
+                        DB::table('clase')->whereIn('idDocente', $docenteIds)->delete();
+                    }
+                }
+
+                // 2. Eliminar persona (CASCADE eliminará automáticamente alumno/docente)
+                // Usando DB::table para hacer DELETE real, no soft delete
+                DB::table('persona')->where('id', $persona->id)->delete();
+
+                // 3. Eliminar cuenta
+                DB::table('cuenta')->where('id', $cuenta->id)->delete();
+
+                // 4. Eliminar dirección
+                DB::table('direccion')->where('id', $idDireccion)->delete();
+            });
+
+            return response()->json([
+                'message' => 'Usuario eliminado definitivamente con éxito',
+                'data' => null
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al eliminar el usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Restaurar un usuario eliminado (soft delete)
+     * @param int $id de usuario a restaurar (persona)
+     * @return JsonResponse respuesta JSON
+     * @throws Throwable en caso de error en la transaccion
+     */
+    public function restore(int $id)
+    {
+        try {
+            // Buscar la persona eliminada (solo soft deleted)
+            $persona = Persona::onlyTrashed()->find($id);
+
+            if (!$persona) {
+                return response()->json([
+                    'message' => 'Usuario eliminado no encontrado',
+                    'data' => null
+                ], 404);
+            }
+
+            // Obtener la cuenta eliminada
+            $cuenta = Cuentum::onlyTrashed()->find($persona->idCuenta);
+
+            if (!$cuenta) {
+                return response()->json([
+                    'message' => 'Cuenta eliminada no encontrada',
+                    'data' => null
+                ], 404);
+            }
+
+            // Transacción para restaurar
+            DB::transaction(function () use ($persona, $cuenta) {
+
+                // Restaurar la persona
+                $persona->restore();
+
+                // Restaurar la cuenta
+                $cuenta->restore();
+            });
+
+            // Obtener el usuario restaurado
+            $usuario = Persona::join('cuenta as c', 'persona.idCuenta', '=', 'c.id')
+                ->select(
+                    'persona.id',
+                    'persona.nombre',
+                    'persona.apellidoPaterno',
+                    'persona.apellidoMaterno',
+                    'persona.curp',
+                    DB::raw("IF(persona.sexo = 'F', 'FEMENINO', 'MASCULINO') as sexo"),
+                    'persona.nss',
+                    'c.rol'
+                )
+                ->where('persona.id', $id)
+                ->first();
+
+            return response()->json([
+                'message' => 'Usuario restaurado con éxito',
+                'data' => $usuario
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al restaurar el usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getDocentes()
+    {
+        $docentes = DB::table('docente as d')
+            ->join('persona as p', 'd.idPersona', '=', 'p.id')
+            ->join('cuenta as c', 'p.idCuenta', '=', 'c.id')
+            ->select(
+                'd.id',
+                DB::raw("CONCAT(p.nombre, ' ', p.apellidoPaterno, ' ', p.apellidoMaterno) as nombreCompleto"),
+                'p.nombre',
+                'p.apellidoPaterno',
+                'p.apellidoMaterno',
+                'd.cedulaProfesional',
+                'c.correo'
+            )
+            ->whereNull('c.deleted_at')
+            ->orderBy('p.apellidoPaterno')
+            ->get();
+
+        return response()->json([
+            'message' => 'Docentes recuperados con éxito',
+            'data' => $docentes
+        ]);
+
+    }
+
+    public function exportExcel()
+    {
+        return Excel::download(new UsuariosExport, 'personas.xlsx');
+    }
+
+    public function asignarEspecialidad(Request $request)
+    {
+        // validando la peticion
+        $request->validate([
+            'idAlumno' => 'required|exists:alumno,id',
+            'idEspecialidad' => 'required|exists:especialidad,id',
+        ]);
+
+        try {
+            $data = DB::transaction(function () use ($request) {
+                $alumno = Alumno::find($request->idAlumno);
+                $especialidad = Especialidad::find($request->idEspecialidad);
+
+                // Obtener el semestre actual del alumno
+                $semestre = $alumno->grupo_semestres()->first()?->semestre;
+
+                if ($semestre->numero < 3) {
+                    throw new Exception('No se puede asignar una especialidad antes del tercer semestre.');
+                }
+
+                // Asignar la especialidad al alumno
+                $alumno->especialidads()->syncWithoutDetaching([$especialidad->id => [
+                    'semestreInicio' => $semestre->numero
+                ]]);
+
+                // Obtener las clases correspondientes a la especialidad y semestre actual
+                $anioActual = now()->year;
+                $clases = Clase::where('idGrupoSemestre', $alumno->grupo_semestres()->first()->id)
+                    ->where('anio', $anioActual)
+                    ->where(function ($query) use ($request) {
+                        $query->whereNull('idEspecialidad') // Clases de tronco común
+                        ->orWhere('idEspecialidad', $request->idEspecialidad); // Clases de la especialidad
+                    })
+                    ->get();
+
+                // Crear calificaciones para las clases obtenidas
+                foreach ($clases as $clase) {
+                    $alumno->calificacions()->firstOrCreate([
+                        'idAlumno' => $alumno->id,
+                        'idClase' => $clase->id,
+                    ], [
+                        'momento1' => 0,
+                        'momento2' => 0,
+                        'momento3' => 0,
+                    ]);
+                }
+
+                return $alumno->especialidads;
+            });
+
+            return response()->json([
+                'message' => 'Especialidad asignada con éxito',
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al asignar la especialidad',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+
     }
 }
