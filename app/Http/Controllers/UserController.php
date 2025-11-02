@@ -911,7 +911,7 @@ class UserController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($request) {
+            $data = DB::transaction(function () use ($request) {
                 $alumno = Alumno::find($request->idAlumno);
                 $especialidad = Especialidad::find($request->idEspecialidad);
 
@@ -948,11 +948,14 @@ class UserController extends Controller
                         'momento3' => 0,
                     ]);
                 }
-                return response()->json([
-                    'message' => 'Especialidad asignada con éxito',
-                    'data' => null
-                ]);
+
+                return $alumno->especialidads;
             });
+
+            return response()->json([
+                'message' => 'Especialidad asignada con éxito',
+                'data' => $data
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([

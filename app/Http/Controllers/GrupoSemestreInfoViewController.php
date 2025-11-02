@@ -76,7 +76,7 @@ class GrupoSemestreInfoViewController extends Controller
                     ],
                     "advertencia" => "No hay clases creadas {$anioActual}."
                 ]
-            ], 200);
+            ]);
         }
 
         // Agrupar clases

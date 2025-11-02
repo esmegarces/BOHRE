@@ -25,7 +25,8 @@ SELECT
     ) AS `periodoSemestre`,
     JSON_ARRAYAGG(
         JSON_OBJECT(
-            'id', `p`.`id`,
+            'id', `a`.`id`,
+            'personaId', `p`.`id`,
             'nia', `a`.`nia`,
             'nombre', `p`.`nombre`,
             'apellidoPaterno', `p`.`apellidoPaterno`,
