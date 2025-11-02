@@ -20,6 +20,10 @@ use App\Http\Controllers\ClaseController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
+Route::get('/dashboard/estadisticas', [App\Http\Controllers\DashboardController::class, 'obtenerEstadisticas']);
+
+
 // Routes de localidad
 Route::get('/municipios', [DireccionController::class, 'getMunicipios']);
 Route::get('/localidades/{id}', [DireccionController::class, 'getLocalidades']);
