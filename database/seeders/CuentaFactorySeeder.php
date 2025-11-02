@@ -39,7 +39,7 @@ class CuentaFactorySeeder extends Seeder
             }
 
             // Generar 10 cuentas de usuario con sus relaciones completas
-            Cuentum::factory(200)
+            Cuentum::factory(250)
                 ->create()
                 ->each(function ($cuenta) {
                     // Crear una dirección aleatoria vinculada a una localidad existente
@@ -99,13 +99,13 @@ class CuentaFactorySeeder extends Seeder
 
                         // Determinar la generación según el semestre
                         if (in_array($numeroSemestre, [1, 2])) {
-                            $fechaInicio = '2025-08-01';
+                            $fechaInicio = '2025-09-01';
                             $fechaFin = '2028-07-31';
                         } elseif (in_array($numeroSemestre, [3, 4])) {
-                            $fechaInicio = '2024-08-01';
+                            $fechaInicio = '2024-09-01';
                             $fechaFin = '2027-07-31';
                         } elseif (in_array($numeroSemestre, [5, 6])) {
-                            $fechaInicio = '2023-08-01';
+                            $fechaInicio = '2023-09-01';
                             $fechaFin = '2026-07-31';
                         }
 
