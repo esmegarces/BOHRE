@@ -36,11 +36,18 @@ Route::patch('/usuarios/{id}', [UserController::class, 'update']);
 Route::delete('/usuarios/{id}', [UserController::class, 'destroy']);
 Route::delete('/usuarios/delete/{id}', [UserController::class, 'destroyPermanently']);
 Route::get('/usuarios/docentes', [UserController::class, 'getDocentes']);
+Route::get('/exportar-personas', [UserController::class, 'exportExcel']);
+Route::patch('/alumno/asignarEspecialidad', [UserController::class, 'asignarEspecialidad']);
 
 
 Route::get('periodos/generaciones', [PeriodosController::class, 'getGeneraciones']);
+Route::post('periodos/generaciones', [PeriodosController::class, 'createGeneracion']);
+Route::get('periodos/generacionesAlumnos', [PeriodosController::class, 'getGeneracionesWithAlumnos']);
+Route::get('periodos/generacionesAlumnos/{id}', [PeriodosController::class, 'getAlumnosGeneraciones']);
 Route::get('periodos/gruposemestres', [PeriodosController::class, 'getGrupoSemestre']);
 Route::get('periodos/semestres', [PeriodosController::class, 'getSemestres']);
+Route::get('periodos/semestresRAW', [PeriodosController::class, 'getSemestresRAW']);
+Route::patch('periodos/semestres', [PeriodosController::class, 'updateSemestres']);
 
 
 Route::get('/especialidades', [EspecialidadesController::class, 'index']);
@@ -63,4 +70,6 @@ Route::get('/gruposemestres/details/{id}', [GrupoSemestreInfoViewController::cla
 Route::post('/clases/generar', [ClaseController::class, 'generar']);
 Route::patch('/clases/{idClase}/asignar-docente', [ClaseController::class, 'asignarDocente']);
 Route::get('/clases/{idClase}/calificaciones', [ClaseController::class, 'getCalificaciones']);
+Route::get('/clases/{idgrupoSemestre}/download/calificaciones', [ClaseController::class, 'getExcelCalificaciones']);
+Route::get('/clases/{numeroSemestre}/{idEspecialidad}/download/calificacionesEsp', [ClaseController::class, 'getExcelCalificacionesEsp']);
 

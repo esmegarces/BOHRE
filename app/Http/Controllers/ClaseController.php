@@ -3,11 +3,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CalificacionesEspecialidadExport;
+use App\Exports\CalificacionesExport;
 use App\Models\Clase;
+use App\Models\Especialidad;
+use App\Models\GrupoSemestreInfoView;
 use App\Services\ClaseGeneratorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 class ClaseController extends Controller
 {
@@ -141,7 +147,7 @@ class ClaseController extends Controller
                 'p.nombre',
                 'p.apellidoPaterno',
                 'p.apellidoMaterno',
-                DB::raw("CONCAT(p.nombre, ' ', p.apellidoPaterno, ' ', p.apellidoMaterno) as nombreCompleto"),
+                DB::raw("CONCAT(p.apellidoPaterno, ' ', p.apellidoMaterno, ' ', p.nombre ) as nombreCompleto"),
                 'esp.nombre as especialidad',
                 'cal.momento1',
                 'cal.momento2',
@@ -197,5 +203,32 @@ class ClaseController extends Controller
                 'estadisticas' => $estadisticas
             ]
         ]);
+    }
+
+    public function getExcelCalificaciones($idGrupoSemestre)
+     {
+         $grupoSemestre = GrupoSemestreInfoView::where('idGrupoSemestre', $idGrupoSemestre)->select(
+             'semestre',
+             'grupo',
+         )->first();
+
+         $dateNow = now()->format('Y-m-d');
+
+         $fileName = 'CALIFICACIONES' . '_' . $grupoSemestre->semestre . $grupoSemestre->grupo . '_' . $dateNow . '.xlsx';
+
+         return Excel::download(new CalificacionesExport($idGrupoSemestre), $fileName);
+    }
+
+    public function getExcelCalificacionesEsp($numeroSemestre, $idEspecialidad)
+     {
+         $dateNow = now()->format('Y-m-d');
+         $especialidad = Especialidad::find($idEspecialidad);
+
+         $fileName = 'CALIFICACIONES_' . 'ESP' . '_' . $especialidad->nombre . '_' . $numeroSemestre . '_' . $dateNow . '.xlsx';
+
+         return Excel::download(
+             new CalificacionesEspecialidadExport($idEspecialidad, $numeroSemestre),
+             $fileName
+         );
     }
 }

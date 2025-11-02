@@ -209,12 +209,12 @@ class EspecialidadesController extends Controller
             ->whereNull('p.deleted_at')
             ->where('a.situacion', 'ACTIVO')
             ->select(
-                'a.id as idAlumno',
+                'p.id as idAlumno',
                 'a.nia',
                 'p.nombre',
                 'p.apellidoPaterno',
                 'p.apellidoMaterno',
-                DB::raw("CONCAT(p.nombre, ' ', p.apellidoPaterno, ' ', p.apellidoMaterno) as nombreCompleto"),
+                DB::raw("CONCAT(p.apellidoPaterno, ' ', p.apellidoMaterno, ' ' ,p.nombre) as nombreCompleto"),
                 's.numero as semestre',
                 'g.prefijo as grupo',
                 'gs.id as idGrupoSemestre',

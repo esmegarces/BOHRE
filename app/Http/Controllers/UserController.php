@@ -9,6 +9,7 @@ use App\Models\Clase;
 use App\Models\Cuentum;
 use App\Models\Direccion;
 use App\Models\Docente;
+use App\Models\Especialidad;
 use App\Models\Generacion;
 use App\Models\Persona;
 use Exception;
@@ -16,6 +17,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\UsuariosExport;
 use Throwable;
 
 class UserController extends Controller
@@ -891,6 +894,72 @@ class UserController extends Controller
             'message' => 'Docentes recuperados con éxito',
             'data' => $docentes
         ]);
+
+    }
+
+    public function exportExcel()
+    {
+        return Excel::download(new UsuariosExport, 'personas.xlsx');
+    }
+
+    public function asignarEspecialidad(Request $request)
+    {
+        // validando la peticion
+        $request->validate([
+            'idAlumno' => 'required|exists:alumno,id',
+            'idEspecialidad' => 'required|exists:especialidad,id',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request) {
+                $alumno = Alumno::find($request->idAlumno);
+                $especialidad = Especialidad::find($request->idEspecialidad);
+
+                // Obtener el semestre actual del alumno
+                $semestre = $alumno->grupo_semestres()->first()?->semestre;
+
+                if ($semestre->numero < 3) {
+                    throw new Exception('No se puede asignar una especialidad antes del tercer semestre.');
+                }
+
+                // Asignar la especialidad al alumno
+                $alumno->especialidads()->syncWithoutDetaching([$especialidad->id => [
+                    'semestreInicio' => $semestre->numero
+                ]]);
+
+                // Obtener las clases correspondientes a la especialidad y semestre actual
+                $anioActual = now()->year;
+                $clases = Clase::where('idGrupoSemestre', $alumno->grupo_semestres()->first()->id)
+                    ->where('anio', $anioActual)
+                    ->where(function ($query) use ($request) {
+                        $query->whereNull('idEspecialidad') // Clases de tronco común
+                        ->orWhere('idEspecialidad', $request->idEspecialidad); // Clases de la especialidad
+                    })
+                    ->get();
+
+                // Crear calificaciones para las clases obtenidas
+                foreach ($clases as $clase) {
+                    $alumno->calificacions()->firstOrCreate([
+                        'idAlumno' => $alumno->id,
+                        'idClase' => $clase->id,
+                    ], [
+                        'momento1' => 0,
+                        'momento2' => 0,
+                        'momento3' => 0,
+                    ]);
+                }
+                return response()->json([
+                    'message' => 'Especialidad asignada con éxito',
+                    'data' => null
+                ]);
+            });
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al asignar la especialidad',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
 
     }
 }

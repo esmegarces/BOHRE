@@ -39,7 +39,7 @@ class CuentaFactorySeeder extends Seeder
             }
 
             // Generar 10 cuentas de usuario con sus relaciones completas
-            Cuentum::factory(100)
+            Cuentum::factory(200)
                 ->create()
                 ->each(function ($cuenta) {
                     // Crear una dirección aleatoria vinculada a una localidad existente
@@ -143,7 +143,7 @@ class CuentaFactorySeeder extends Seeder
 
                         // A partir del 3er semestre, los alumnos eligen una especialidad
                         // (Alimentos, Administración o Salud) y cursan materias específicas
-                        if ($grupoSemestre->semestre->numero >= 3) {
+                        if ($grupoSemestre->semestre->numero > 3) {
 
                             // Seleccionar una especialidad aleatoria
                             $especialidad = Especialidad::inRandomOrder()->first();

@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
+
 
 class MainSeeder extends Seeder
 {
@@ -26,7 +28,16 @@ class MainSeeder extends Seeder
                 AsignaturasSeeder::class,
                 PlanAsignaturaSeeder::class,
                 GrupoSemestreSeeder::class,
-                //CuentaFactorySeeder::class,
+            ]);
+            // Ejecutar comando artisan clases:generar
+            Artisan::call('clases:generar');
+
+            // Opcional: mostrar salida del comando en consola
+            $this->command->info(Artisan::output());
+
+            // Finalmente ejecutar el factory o seeder de cuentas
+            $this->call([
+                CuentaFactorySeeder::class,
             ]);
         });
     }
