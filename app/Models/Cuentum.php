@@ -1,45 +1,46 @@
 <?php
 
-/**
- * Created by Reliese Model.
- */
-
 namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-/**
- * Class Cuentum
- *
- * @property int $id
- * @property string $correo
- * @property string $contrasena
- * @property string $rol
- * @property string|null $deleted_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- *
- * @property Collection|Persona[] $personas
- *
- * @package App\Models
- */
-class Cuentum extends Model
+class Cuentum extends Authenticatable implements JWTSubject
 {
-	use SoftDeletes, HasFactory;
-	protected $table = 'cuenta';
+    use SoftDeletes, HasFactory;
 
-	protected $fillable = [
-		'correo',
-		'contrasena',
-		'rol'
-	];
+    protected $table = 'cuenta';
 
-	public function personas()
-	{
-		return $this->hasMany(Persona::class, 'idCuenta');
-	}
+    protected $fillable = [
+        'correo',
+        'contrasena',
+        'rol'
+    ];
+
+    public function persona()
+    {
+        return $this->hasOne(Persona::class, 'idCuenta');
+    }
+
+    // Solo estos dos métodos para JWT
+    public function getJWTIdentifier()
+    {
+        return $this->getKey(); // Devuelve el ID
+    }
+
+    public function getJWTCustomClaims()
+    {
+        $persona = $this->persona;
+
+        return [
+            'id' => $this->id,
+            'idPersona' => $persona?->id,
+            'rol' => $this->rol,
+            'nombre' => $persona?->nombre,
+        ];
+    }
 }
