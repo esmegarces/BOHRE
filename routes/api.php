@@ -91,3 +91,10 @@ Route::middleware('auth:api')->group(function () {
 });
 
 
+// routes/api.php
+use App\Http\Controllers\BoletaController;
+
+Route::prefix('alumnos')->group(function () {
+    Route::get('{idAlumno}/semestres', [BoletaController::class, 'obtenerSemestresAlumno']);
+    Route::get('{idAlumno}/boleta/{idGrupoSemestre}', [BoletaController::class, 'generarBoleta']);
+});

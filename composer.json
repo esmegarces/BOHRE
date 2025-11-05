@@ -11,6 +11,7 @@
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
         "maatwebsite/excel": "3.1.47",
+        "tecnickcom/tcpdf": "^6.10",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {
