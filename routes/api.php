@@ -32,48 +32,58 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/municipios', [DireccionController::class, 'getMunicipios']);
         Route::get('/localidades/{id}', [DireccionController::class, 'getLocalidades']);
 
-        //Routes de usuario
-        Route::post('/usuarios', [UserController::class, 'store']);
-        Route::get('/usuarios', [UserController::class, 'show']);
-        Route::get('/usuarios/deleted', [UserController::class, 'showDeletes']);
-        Route::get('/usuarios/{rol}/{id}', [UserController::class, 'retrieveByRol']);
-        Route::patch('/usuarios/restore/{id}', [UserController::class, 'restore']);
-        Route::patch('/usuarios/{id}', [UserController::class, 'update']);
-        Route::delete('/usuarios/{id}', [UserController::class, 'destroy']);
-        Route::delete('/usuarios/delete/{id}', [UserController::class, 'destroyPermanently']);
-        Route::get('/usuarios/docentes', [UserController::class, 'getDocentes']);
+        Route::prefix('usuarios')->group(function () {
+            //Routes de usuario
+            Route::post('', [UserController::class, 'store']);
+            Route::get('', [UserController::class, 'show']);
+            Route::get('deleted', [UserController::class, 'showDeletes']);
+            Route::get('{rol}/{id}', [UserController::class, 'retrieveByRol']);
+            Route::patch('restore/{id}', [UserController::class, 'restore']);
+            Route::patch('{id}', [UserController::class, 'update']);
+            Route::delete('{id}', [UserController::class, 'destroy']);
+            Route::delete('delete/{id}', [UserController::class, 'destroyPermanently']);
+            Route::get('docentes', [UserController::class, 'getDocentes']);
+        });
         Route::get('/exportar-personas', [UserController::class, 'exportExcel']);
         Route::patch('/alumno/asignarEspecialidad', [UserController::class, 'asignarEspecialidad']);
 
-        Route::get('periodos/generaciones', [PeriodosController::class, 'getGeneraciones']);
-        Route::post('periodos/generaciones', [PeriodosController::class, 'createGeneracion']);
-        Route::get('periodos/generacionesAlumnos', [PeriodosController::class, 'getGeneracionesWithAlumnos']);
-        Route::get('periodos/generacionesAlumnos/{id}', [PeriodosController::class, 'getAlumnosGeneraciones']);
-        Route::get('periodos/gruposemestres', [PeriodosController::class, 'getGrupoSemestre']);
-        Route::get('periodos/semestres', [PeriodosController::class, 'getSemestres']);
-        Route::get('periodos/semestresRAW', [PeriodosController::class, 'getSemestresRAW']);
-        Route::patch('periodos/semestres', [PeriodosController::class, 'updateSemestres']);
+        Route::prefix('periodos')->group(function () {
+            Route::get('generaciones', [PeriodosController::class, 'getGeneraciones']);
+            Route::post('generaciones', [PeriodosController::class, 'createGeneracion']);
+            Route::get('generacionesAlumnos', [PeriodosController::class, 'getGeneracionesWithAlumnos']);
+            Route::get('generacionesAlumnos/{id}', [PeriodosController::class, 'getAlumnosGeneraciones']);
+            Route::get('gruposemestres', [PeriodosController::class, 'getGrupoSemestre']);
+            Route::get('semestres', [PeriodosController::class, 'getSemestres']);
+            Route::get('semestresRAW', [PeriodosController::class, 'getSemestresRAW']);
+            Route::patch('semestres', [PeriodosController::class, 'updateSemestres']);
+        });
 
-        Route::get('/especialidades', [EspecialidadesController::class, 'index']);
-        Route::get('/especialidades/{id}', [EspecialidadesController::class, 'getDetailsCalificationsByEspecialidad']);
-        Route::post('/especialidades', [EspecialidadesController::class, 'store']);
-        Route::put('/especialidades/{id}', [EspecialidadesController::class, 'update']);
-        Route::get('/especialidades/asignaturas/{id}', [EspecialidadesController::class, 'getAsignaturasByEspecialidad']);
+        Route::prefix('especialidades')->group(function () {
+            Route::get('', [EspecialidadesController::class, 'index']);
+            Route::get('{id}', [EspecialidadesController::class, 'getDetailsCalificationsByEspecialidad']);
+            Route::post('', [EspecialidadesController::class, 'store']);
+            Route::put('{id}', [EspecialidadesController::class, 'update']);
+            Route::get('asignaturas/{id}', [EspecialidadesController::class, 'getAsignaturasByEspecialidad']);
+        });
 
-        Route::get('/asignaturas', [AsignaturasController::class, 'index']);
-        Route::get('/asignaturas/{id}', [AsignaturasController::class, 'show']);
-        Route::post('/asignaturas', [AsignaturasController::class, 'store']);
-        Route::patch('/asignaturas/{id}', [AsignaturasController::class, 'update']);
-        Route::delete('/asignaturas/{id}', [AsignaturasController::class, 'destroy']);
+        Route::prefix('asignaturas')->group(function () {
+            Route::get('', [AsignaturasController::class, 'index']);
+            Route::get('{id}', [AsignaturasController::class, 'show']);
+            Route::post('', [AsignaturasController::class, 'store']);
+            Route::patch('{id}', [AsignaturasController::class, 'update']);
+            Route::delete('{id}', [AsignaturasController::class, 'destroy']);
+        });
 
         Route::get('/gruposemestres/details', [GrupoSemestreInfoViewController::class, 'index']);
         Route::get('/gruposemestres/details/{id}', [GrupoSemestreInfoViewController::class, 'showExtraInfo']);
 
-        Route::post('/clases/generar', [ClaseController::class, 'generar']);
-        Route::patch('/clases/{idClase}/asignar-docente', [ClaseController::class, 'asignarDocente']);
-        Route::get('/clases/{idClase}/calificaciones', [ClaseController::class, 'getCalificaciones']);
-        Route::get('/clases/{idgrupoSemestre}/download/calificaciones', [ClaseController::class, 'getExcelCalificaciones']);
-        Route::get('/clases/{numeroSemestre}/{idEspecialidad}/download/calificacionesEsp', [ClaseController::class, 'getExcelCalificacionesEsp']);
+        Route::prefix('clases')->group(function () {
+            Route::post('generar', [ClaseController::class, 'generar']);
+            Route::patch('{idClase}/asignar-docente', [ClaseController::class, 'asignarDocente']);
+            Route::get('{idClase}/calificaciones', [ClaseController::class, 'getCalificaciones']);
+            Route::get('{idgrupoSemestre}/download/calificaciones', [ClaseController::class, 'getExcelCalificaciones']);
+            Route::get('{numeroSemestre}/{idEspecialidad}/download/calificacionesEsp', [ClaseController::class, 'getExcelCalificacionesEsp']);
+        });
 
     });
 
