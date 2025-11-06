@@ -11,6 +11,7 @@ use App\Http\Controllers\ClaseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocenteMateriasController;
+use App\Http\Controllers\BoletaController;
 
 // Rutas públicas
 Route::post('login', [AuthController::class, 'login']);
@@ -88,13 +89,10 @@ Route::middleware('auth:api')->group(function () {
 
     });
 
-});
-
-
-// routes/api.php
-use App\Http\Controllers\BoletaController;
-
-Route::prefix('alumnos')->group(function () {
-    Route::get('{idAlumno}/semestres', [BoletaController::class, 'obtenerSemestresAlumno']);
-    Route::get('{idAlumno}/boleta/{idGrupoSemestre}', [BoletaController::class, 'generarBoleta']);
+    Route::middleware('role:ALUMNO')->group(function () {
+        Route::prefix('alumnos')->group(function () {
+            Route::get('{idPerson}/semestres', [BoletaController::class, 'obtenerSemestresAlumno']);
+            Route::get('{idPerson}/boleta/{idGrupoSemestre}', [BoletaController::class, 'generarBoleta']);
+        });
+    });
 });

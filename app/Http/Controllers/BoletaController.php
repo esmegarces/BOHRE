@@ -11,7 +11,7 @@ use TCPDF;
 
 class BoletaController extends Controller
 {
-    public function obtenerSemestresAlumno($idAlumno)
+    public function obtenerSemestresAlumno($idPerson)
     {
         try {
             $alumno = Alumno::with([
@@ -19,7 +19,7 @@ class BoletaController extends Controller
                 'grupo_semestres.semestre',
                 'grupo_semestres.grupo',
                 'especialidads'
-            ])->findOrFail($idAlumno);
+            ])->where('idPersona', $idPerson)->firstOrFail();
 
             $semestres = $alumno->grupo_semestres->map(function ($gs) use ($alumno) {
                 $totalCalificaciones = Calificacion::whereHas('clase', function ($q) use ($gs) {
@@ -69,16 +69,16 @@ class BoletaController extends Controller
         }
     }
 
-    public function generarBoleta($idAlumno, $idGrupoSemestre)
+    public function generarBoleta($idPerson, $idGrupoSemestre)
     {
         try {
             $anioActual = Carbon::now()->year;
 
-            $alumno = Alumno::with(['persona', 'especialidads'])->findOrFail($idAlumno);
+            $alumno = Alumno::with(['persona', 'especialidads'])->where('idPersona', $idPerson)->firstOrFail();
             $grupoSemestre = GrupoSemestre::with(['grupo', 'semestre'])
                 ->findOrFail($idGrupoSemestre);
 
-            $calificaciones = Calificacion::where('idAlumno', $idAlumno)
+            $calificaciones = Calificacion::where('idAlumno', $alumno->id)
                 ->whereHas('clase', function ($q) use ($idGrupoSemestre, $anioActual) {
                     $q->where('idGrupoSemestre', $idGrupoSemestre)
                         ->where('anio', $anioActual);
@@ -402,36 +402,29 @@ class BoletaPDF extends TCPDF
     }
 
     // Footer se ejecuta automáticamente en cada página
+    // Footer se ejecuta automáticamente en cada página
     public function Footer()
     {
         $this->SetY(-50);
 
-        // Firmas
+        // Firmas - Centradas
         $this->SetFont('helvetica', '', 8);
 
-        // Columna 1: Directora
-        $this->SetXY(20, -48);
+        // Directora (centrada)
+        $pageWidth = $this->getPageWidth();
+        $centerX = $pageWidth / 2;
+
+        $this->SetXY($centerX - 25, -48); // Centrado (50/2 = 25)
         $this->Cell(50, 4, '________________________________', 0, 0, 'C');
-        $this->SetXY(20, -44);
+        $this->SetXY($centerX - 25, -44);
         $this->SetFont('helvetica', 'B', 8);
         $this->Cell(50, 4, 'DIRECTORA', 0, 0, 'C');
-        $this->SetXY(20, -40);
+        $this->SetXY($centerX - 25, -40);
         $this->SetFont('helvetica', '', 7);
         $this->Cell(50, 4, 'LIC. MARÍA DEL CONSUELO PARRA CASTILLO', 0, 0, 'C');
 
-        // Columna 2: Sello (círculo)
-        $this->Circle(107.5, -38, 12, 0, 360, 'D');
-
-        // Columna 3: Tutor
-        $this->SetXY(145, -48);
-        $this->SetFont('helvetica', '', 8);
-        $this->Cell(50, 4, '________________________________', 0, 0, 'C');
-        $this->SetXY(145, -44);
-        $this->SetFont('helvetica', 'B', 8);
-        $this->Cell(50, 4, 'TUTOR DE GRUPO', 0, 0, 'C');
-        $this->SetXY(145, -40);
-        $this->SetFont('helvetica', '', 7);
-        $this->Cell(50, 4, 'LIC. JUANA MARCELO LOAIZA', 0, 0, 'C');
+        // Sello (opcional, comentado si no lo necesitas)
+        // $this->Circle(107.5, -38, 12, 0, 360, 'D');
 
         // Nota final
         $this->SetY(-25);
