@@ -28,9 +28,10 @@ Route::middleware('auth:api')->group(function () {
 
         Route::get('/dashboard/estadisticas', [DashboardController::class, 'obtenerEstadisticas']);
 
-        // Routes de localidad
-        Route::get('/municipios', [DireccionController::class, 'getMunicipios']);
-        Route::get('/localidades/{id}', [DireccionController::class, 'getLocalidades']);
+        Route::prefix('direcciones')->group(function () {
+            Route::get('municipios', [DireccionController::class, 'getMunicipios']);
+            Route::get('localidades/{id}', [DireccionController::class, 'getLocalidades']);
+        });
 
         Route::prefix('usuarios')->group(function () {
             //Routes de usuario
@@ -43,9 +44,8 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('{id}', [UserController::class, 'destroy']);
             Route::delete('delete/{id}', [UserController::class, 'destroyPermanently']);
             Route::get('docentes', [UserController::class, 'getDocentes']);
+            Route::patch('/alumnos/asignarEspecialidad', [UserController::class, 'asignarEspecialidad']);
         });
-
-        Route::patch('/alumno/asignarEspecialidad', [UserController::class, 'asignarEspecialidad']);
 
         Route::prefix('periodos')->group(function () {
             Route::get('generaciones', [PeriodosController::class, 'getGeneraciones']);
@@ -74,10 +74,10 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('{id}', [AsignaturasController::class, 'destroy']);
         });
 
-        Route::get('/gruposemestres/details', [GrupoSemestreInfoViewController::class, 'index']);
-        Route::get('/gruposemestres/details/{id}', [GrupoSemestreInfoViewController::class, 'showExtraInfo']);
 
         Route::prefix('clases')->group(function () {
+            Route::get('details', [GrupoSemestreInfoViewController::class, 'index']);
+            Route::get('details/{id}', [GrupoSemestreInfoViewController::class, 'showExtraInfo']);
             Route::post('generar', [ClaseController::class, 'generar']);
             Route::patch('{idClase}/asignar-docente', [ClaseController::class, 'asignarDocente']);
             Route::get('{idClase}/calificaciones', [ClaseController::class, 'getCalificaciones']);
