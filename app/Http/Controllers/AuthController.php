@@ -29,12 +29,23 @@ class AuthController extends Controller
     public function me()
     {
         $user = auth()->user()->load('persona');
-        return response()->json($user);
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'rol' => $user->rol,
+                'idPersona' => $user->persona?->id,
+            ],
+            'persona' => [
+                'nombre' => $user->persona?->nombre,
+                'apellidoPaterno' => $user->persona?->apellidoPaterno,
+                'apellidoMaterno' => $user->persona?->apellidoMaterno,
+            ]
+        ]);
     }
 
     protected function respondWithToken($token, $cuenta)
     {
-        $cuenta->load('persona:id,idCuenta,nombre,apellidoPaterno,apellidoMaterno'); // Solo carga id e idCuenta de persona
+        $cuenta->load('persona:id,idCuenta'); // Solo carga id e idCuenta de persona
 
         return response()->json([
             'access_token' => $token,
@@ -44,9 +55,6 @@ class AuthController extends Controller
                 'id' => $cuenta->id,
                 'idPersona' => $cuenta->persona?->id,
                 'rol' => $cuenta->rol,
-                'nombre' => $cuenta->persona?->nombre,
-                'apellidoPaterno' => $cuenta->persona?->apellidoPaterno,
-                'apellidoMaterno' => $cuenta->persona?->apellidoMaterno,
             ],
         ]);
     }

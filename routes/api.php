@@ -44,7 +44,7 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('delete/{id}', [UserController::class, 'destroyPermanently']);
             Route::get('docentes', [UserController::class, 'getDocentes']);
         });
-        Route::get('/exportar-personas', [UserController::class, 'exportExcel']);
+
         Route::patch('/alumno/asignarEspecialidad', [UserController::class, 'asignarEspecialidad']);
 
         Route::prefix('periodos')->group(function () {
