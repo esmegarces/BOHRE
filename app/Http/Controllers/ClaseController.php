@@ -82,31 +82,52 @@ class ClaseController extends Controller
             ], 404);
         }
 
-        // Permitir asignar o desasignar (null)
-        $clase->idDocente = $request->idDocente;
-        $clase->save();
+        try {
+            if ($clase->idEspecialidad) {
+                $clases = Clase::where('idEspecialidad', $clase->idEspecialidad)
+                    ->where('anio', $clase->anio)
+                    ->where('idAsignatura', $clase->idAsignatura)
+                    ->get();
 
-        // Obtener información completa actualizada
-        $claseActualizada = Clase::with([
-            'asignatura:id,nombre',
-            'docente.persona:id,nombre,apellidoPaterno,apellidoMaterno'
-        ])->find($idClase);
+                DB::transaction(function () use ($clases, $request) {
+                    foreach ($clases as $c) {
+                        $c->idDocente = $request->idDocente;
+                        $c->save();
+                    }
+                });
 
-        return response()->json([
-            'message' => $request->idDocente
-                ? 'Docente asignado con éxito'
-                : 'Docente desasignado con éxito',
-            'data' => [
-                'idClase' => $claseActualizada->id,
-                'idDocente' => $claseActualizada->idDocente,
-                'nombreDocente' => $claseActualizada->docente
-                    ? $claseActualizada->docente->persona->nombre . ' ' .
-                    $claseActualizada->docente->persona->apellidoPaterno . ' ' .
-                    $claseActualizada->docente->persona->apellidoMaterno
-                    : null
-            ]
-        ]);
+            } else {
+                // Permitir asignar o desasignar (null)
+                $clase->idDocente = $request->idDocente;
+                $clase->save();
+            }
+
+            // Obtener información completa actualizada
+            $claseActualizada = Clase::with([
+                'asignatura:id,nombre',
+                'docente.persona:id,nombre,apellidoPaterno,apellidoMaterno'
+            ])->find($idClase);
+
+            return response()->json([
+                'message' => $request->idDocente
+                    ? 'Docente asignado con éxito'
+                    : 'Docente desasignado con éxito',
+                'data' => [
+                    'idDocente' => $claseActualizada->idDocente,
+                    'nombreDocente' => $claseActualizada->docente
+                        ? $claseActualizada->docente->persona->nombre . ' ' .
+                        $claseActualizada->docente->persona->apellidoPaterno . ' ' .
+                        $claseActualizada->docente->persona->apellidoMaterno
+                        : null
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al asignar/desasignar docente: ' . $e->getMessage()
+            ], 500);
+        }
     }
+
 
     /**
      * recuperar las calificaciones de una clase
@@ -206,29 +227,29 @@ class ClaseController extends Controller
     }
 
     public function getExcelCalificaciones($idGrupoSemestre)
-     {
-         $grupoSemestre = GrupoSemestreInfoView::where('idGrupoSemestre', $idGrupoSemestre)->select(
-             'semestre',
-             'grupo',
-         )->first();
+    {
+        $grupoSemestre = GrupoSemestreInfoView::where('idGrupoSemestre', $idGrupoSemestre)->select(
+            'semestre',
+            'grupo',
+        )->first();
 
-         $dateNow = now()->format('Y-m-d');
+        $dateNow = now()->format('Y-m-d');
 
-         $fileName = 'CALIFICACIONES' . '_' . $grupoSemestre->semestre . $grupoSemestre->grupo . '_' . $dateNow . '.xlsx';
+        $fileName = 'CALIFICACIONES' . '_' . $grupoSemestre->semestre . $grupoSemestre->grupo . '_' . $dateNow . '.xlsx';
 
-         return Excel::download(new CalificacionesExport($idGrupoSemestre), $fileName);
+        return Excel::download(new CalificacionesExport($idGrupoSemestre), $fileName);
     }
 
     public function getExcelCalificacionesEsp($numeroSemestre, $idEspecialidad)
-     {
-         $dateNow = now()->format('Y-m-d');
-         $especialidad = Especialidad::find($idEspecialidad);
+    {
+        $dateNow = now()->format('Y-m-d');
+        $especialidad = Especialidad::find($idEspecialidad);
 
-         $fileName = 'CALIFICACIONES_' . 'ESP' . '_' . $especialidad->nombre . '_' . $numeroSemestre . '_' . $dateNow . '.xlsx';
+        $fileName = 'CALIFICACIONES_' . 'ESP' . '_' . $especialidad->nombre . '_' . $numeroSemestre . '_' . $dateNow . '.xlsx';
 
-         return Excel::download(
-             new CalificacionesEspecialidadExport($idEspecialidad, $numeroSemestre),
-             $fileName
-         );
+        return Excel::download(
+            new CalificacionesEspecialidadExport($idEspecialidad, $numeroSemestre),
+            $fileName
+        );
     }
 }

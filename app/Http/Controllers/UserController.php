@@ -17,8 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\UsuariosExport;
 use Throwable;
 
 class UserController extends Controller
@@ -895,11 +893,6 @@ class UserController extends Controller
             'data' => $docentes
         ]);
 
-    }
-
-    public function exportExcel()
-    {
-        return Excel::download(new UsuariosExport, 'personas.xlsx');
     }
 
     public function asignarEspecialidad(Request $request)

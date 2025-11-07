@@ -30,6 +30,21 @@ class CuentaFactorySeeder extends Seeder
         // mostrando en consola que se esta ejecutando el seeder
         $this->command->info('🌱 Ejecutando el seeder de cuentas con sus relaciones...');
 
+        DB::transaction(function () {
+            // crear un usuario admin fijo para pruebas
+            $adminCuenta = Cuentum::factory()->create([
+                'correo' => 'humbertodelac13@gmail.com',
+                'contrasena' => \Hash::make('h13h12h2002'),
+                'rol' => 'admin',
+            ]);
+
+            $adminDireccion = Direccion::factory()->create();
+            Persona::factory()
+                ->for($adminCuenta, 'cuentum')
+                ->for($adminDireccion, 'direccion')
+                ->create();
+        });
+
         \DB::transaction(function () {
             // Verificar que existan localidades en la base de datos antes de continuar
             // Las localidades son necesarias para crear direcciones válidas
